@@ -17,7 +17,7 @@ c     "radialsub" finds the radial distribution function for a specified
 c     pair of atom types via analysis of a set of coordinate frames
 c
 c
-      subroutine radialsub
+      subroutine radialsub (istep)
       use argue
       use atomid
       use atoms
@@ -35,37 +35,32 @@ c
 
       implicit none
       integer i,j,k
-      integer nframe,iframe
-      integer iarc,next
+      integer nframe
+      integer next
       integer molj,molk
       integer numj,numk
       integer typej,typek
-      integer start,stop
-      integer step,skip
       integer nbin,bin
       integer freeunit
       integer unit
-c      integer, allocatable :: hist(:)
+      integer istep
       real*8 xj,yj,zj
       real*8 dx,dy,dz
       real*8 rjk,rmax,width
       real*8 rlower,rupper
       real*8 factor,pairs
       real*8 volume,expect
-c      real*8, allocatable :: gr(:)
-c      real*8, allocatable :: gs(:)
-      logical first,intramol
+      logical intramol
       character*3 namej,namek
       character*6 labelj,labelk
-c
 c     open the trajectory archive and read the initial frame
 c
-      call getarcmodified (iarc)
+c      call getarcmodified (iarc)
 c
 c     get the unitcell parameters and number of molecules
 c
-      call unitcell
-      call molecule
+c      call unitcell
+c      call molecule
 c
 c     set cutoffs small to enforce use of minimum images
 c
@@ -76,12 +71,6 @@ c!!      use_mpole = .false.
 c!!     use_ewald = .false.
 c!!     vdwcut = 0.01d0
 c!!     call lattice
-c
-c     get numbers of the coordinate frames to be processed
-c
-      start = rdf_start
-      stop = rdf_stop
-      step = rdf_step   
 c
 c     get the names of the atoms to be used in rdf computation
 c
@@ -123,120 +112,74 @@ c     set the number of distance bins
 c
       nbin = rdf_nbin
 c
-c     count the number of coordinate frames in the archive file
-c
-      abort = .false.
-      rewind (unit=iarc)
-      first = .true.
-      nframe = 0
-      do while (.not. abort)
-         call readcart (iarc,first)
-         nframe = nframe + 1
-      end do
-      nframe = nframe - 1
-      stop = min(nframe,stop)
-      nframe = (stop-start)/step + 1
-      write (iout,170)  nframe
-  170 format (/,' Number of Coordinate Frames :',i14)
-
-c
 c     if ctn is greater than rdf_mean then ctn = 1
 c
       if (ctn > rdf_mean) then
          ctn = 1
       end if    
-c
-c     get the archived coordinates for each frame in turn
-c
-      write (iout,190)
-  190 format (/,' Reading the Coordinates Archive File :',/)
-      rewind (unit=iarc)
-      first = .true.
-      nframe = 0
-      iframe = start
-      skip = start
-      do while (iframe.ge.start .and. iframe.le.stop)
-         do j = 1, skip-1
-            call readcart (iarc,first)
-         end do
-         iframe = iframe + step
-         skip = step
-         call readcart (iarc,first)
-         if (.not. abort) then
-            nframe = nframe + 1
-            if (mod(nframe,100) .eq. 0) then
-               write (iout,200)  nframe
-  200          format (4x,'Processing Coordinate Frame',i13)
-            end if
-            do j = 1, n
-               if (name(j).eq.namej .or. type(j).eq.typej) then
-                  xj = x(j)
-                  yj = y(j)
-                  zj = z(j)
-                  molj = molcule(j)
-                  do k = 1, n
-                     if (name(k).eq.namek .or. type(k).eq.typek) then
-                        if (j .ne. k) then
-                           molk = molcule(k)
-                           if (intramol .or. molj.ne.molk) then
-                              dx = x(k) - xj
-                              dy = y(k) - yj
-                              dz = z(k) - zj
-                              call image (dx,dy,dz)
-                              rjk = sqrt(dx*dx + dy*dy + dz*dz)
-                              bin = int(rjk/width) + 1
-                              if (bin .le. nbin)
-     &                           hist(bin,ctn) = hist(bin,ctn) + 1
-                           end if
+c     mypart :):)
+      istep = istep
+
+c      print *, 'USING ARRAYS', istep      
+         do j = 1, n
+            if (name(j).eq.namej .or. 
+     &          type(j).eq.typej) then
+               xj = x(j)
+               yj = y(j)
+               zj = z(j)
+               molj = molcule(j)
+               do k = 1, n
+                  if (name(k).eq.namek .or. 
+     &                type(k).eq.typek) then
+                     if (j .ne. k) then
+                        molk = molcule(k)
+                        if (intramol .or. molj.ne.molk) then
+                           dx = x(k) - xj
+                           dy = y(k) - yj
+                           dz = z(k) - zj
+                           call image (dx,dy,dz)             
+                           rjk = sqrt(dx*dx + dy*dy + dz*dz)
+                           bin = int(rjk/width) + 1
+                           if (bin .le. nbin)
+     &                         hist(bin,ctn) = hist(bin,ctn) + 1
                         end if
                      end if
-                  end do
-               end if
-            end do
-         end if
-      end do
-c
-c     ensure a valid frame is loaded and report total frames
-c
-      if (abort) then
-         rewind (unit=iarc)
-         first = .true.
-         call readcart (iarc,first)
-      end if
-      close (unit=iarc)
-      if (mod(nframe,100) .ne. 0) then
-         write (iout,210)  nframe
-  210    format (4x,'Processing Coordinate Frame',i13)
-      end if
+                  end if
+               end do
+            end if
+         end do
 c
 c     count the number of ourrences of each atom type
 c
-      numj = 0
-      numk = 0
-      do i = 1, n
-         if (name(i).eq.namej .or. type(i).eq.typej)  numj = numj + 1
-         if (name(i).eq.namek .or. type(i).eq.typek)  numk = numk + 1
-      end do
+         numj = 0
+         numk = 0
+         do i = 1, n
+            if (name(i).eq.namej .or. 
+     &       type(i).eq.typej)  numj = numj + 1
+            if (name(i).eq.namek .or. 
+     &       type(i).eq.typek)  numk = numk + 1
+         end do
 c
 c     normalize the distance bins to give radial distribution
 c
-      if (numj.ne.0 .and. numk.ne.0) then
-         factor = (4.0d0/3.0d0) * pi * dble(nframe)
-         if (use_bounds) then
-            pairs = dble(numj) * dble(numk)
-            volume = (gamma_sin*gamma_term) * xbox * ybox * zbox
-            if (octahedron)  volume = 0.5d0 * volume
-            if (dodecadron)  volume = volume / root2
-            factor = factor * pairs / volume
-         end if
-         do i = 1, nbin
-            rupper = dble(i) * width
-            rlower = rupper - width
-            expect = factor * (rupper**3 - rlower**3)
-            gr(i,ctn) = dble(hist(i,ctn)) / expect
-            hist(i,ctn) = 0
-         end do
-      end if
+         nframe = 1
+         if (numj.ne.0 .and. numk.ne.0) then
+            factor = (4.0d0/3.0d0) * pi * dble(nframe)
+            if (use_bounds) then
+               pairs = dble(numj) * dble(numk)
+               volume = (gamma_sin*gamma_term) * xbox * ybox * zbox
+               if (octahedron)  volume = 0.5d0 * volume
+               if (dodecadron)  volume = volume / root2
+               factor = factor * pairs / volume
+            end if
+            do i = 1, nbin
+               rupper = dble(i) * width
+               rlower = rupper - width
+               expect = factor * (rupper**3 - rlower**3)
+               gr(i,ctn) = dble(hist(i,ctn)) / expect
+               hist(i,ctn) = 0
+            end do
+         end if   
 c
 c     find the 5th degree polynomial smoothed distribution function
 c
@@ -301,33 +244,5 @@ c
          close(unit)
       end if   
 
-cc         unit = freeunit ()
-cc         open(unit,file='rdf.txt',status='unknown',position='append')
-cc         write (unit,250)  labelj,labelk
-cc  250    format (/,' Pairwise Radial Distribution Function :'
-cc     &        //,7x,'First Name or Type :  ',a6,
-cc     &           5x,'Second Name or Type :  ',a6)
-cc         write (unit,260)
-cc  260    format (/,5x,'Bin',9x,'Counts',7x,'Distance',7x,'Raw g(r)',
-cc     &           4x,'Smooth g(r)',/)
-cc         do i = 1, nbin
-cc            write (unit,270)  i,hist(i,ctn),
-cc     &         (dble(i)-0.5d0)*width,gr(i,ctn),gs(i,ctn)
-cc  270    format (i8,i15,3x,f12.4,3x,f12.4,3x,f12.4)
-cc         hist(i,ctn) = 0
-cc         gr(i,ctn) = 0.0d0
-cc         gs(i,ctn) = 0.0d0
-cc         end do 
-cc         close(unit)
-     
-c
-c     increment start and stop for next call to radialsub
-c
-
-      rdf_start = rdf_start + 1
-      rdf_stop = rdf_stop + 1
       ctn = ctn + 1
-      print *, 'ctn = ', ctn
-      print *, 'rdf_mean = ', rdf_mean
-
       end   

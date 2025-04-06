@@ -43,6 +43,7 @@ c
       real*8 rmax,width
       logical exist,query
       logical intramol
+      logical read_file
       character*1 answer
       integer freeunit
       integer unit
@@ -57,6 +58,7 @@ c
       step = 1
       counter = 1
       savelock = 0
+      read_file = .true.
       query = .true.
       call nextarg (string,exist)
       if (exist) then
@@ -70,11 +72,11 @@ c
    10 continue
       if (query) then
          write (iout,20)
-   20    format (/,' Numbers of First & Last Frame, Step and',
-     &              ' mean :  ',$)
+   20    format (/,' Enter ',
+     &              ' Mean :  ',$)
          read (input,30)  record
    30    format (a240)
-         read (record,*,err=40,end=40)  start,stop,step,mean
+         read (record,*,err=40,end=40)  mean
    40    continue
       end if      
 c
@@ -168,9 +170,6 @@ c
 c
 c     store values in the module for later use by radialsub
 c
-      rdf_start = start
-      rdf_stop = stop
-      rdf_step = step
       rdf_labelj = labelj
       rdf_labelk = labelk
       rdf_rmax = rmax

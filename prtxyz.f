@@ -25,7 +25,6 @@ c
       use files
       use inform
       use titles 
-      use coordstorage
       implicit none
       integer i,j,k,ixyz
       integer size,crdsiz
@@ -37,18 +36,6 @@ c
       character*25 fstr
       character*240 xyzfile
 c
-c
-c     Allocate coordinate array  
-c
-      if (.not. allocated(coord_array)) then
-         allocate(coord_array(n,5))
-      end if
-      if (.not. allocated(name_array)) then
-         allocate(name_array(n))
-      end if
-      if (.not. allocated(idxandtype)) then
-         allocate(idxandtype(n,2))
-      end if
 c
 c     open the output unit if not already done
 c
@@ -109,12 +96,6 @@ c
      &          '.'//digc//',i6,8'//atmc//')'
       do i = 1, n
          k = n12(i)
-         idxandtype(i,1) = i
-         idxandtype(i,2) = type(i)
-         coord_array(i,1) = x(i)  
-         coord_array(i,2) = y(i)  
-         coord_array(i,3) = z(i)  
-         name_array(i) = name(i)
          if (k .eq. 0) then
             write (ixyz,fstr)  i,name(i),x(i),y(i),z(i),type(i)
          else
@@ -122,15 +103,6 @@ c
      &                         (i12(j,i),j=1,k)
          end if
       end do
-c
-c     Debugging Output: Print stored coordinates to console  ! <<< CHANGE >>> Added Debugging
-c
-c      write (*,*) 'Stored Coordinates:'
-c      do i = 1, n
-c            write (*,*) 'Atom', i, ':', coord_array(i,1), 
-c     &                  coord_array(i,2), coord_array(i,3),
-c     &                  'Type:', idxandtype(i,2), 'Name:', name_array(i)
-c     end do
 c
 c     close the output unit if opened by this routine
 c

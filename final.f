@@ -33,7 +33,6 @@ c
       use chgtrn
       use chunks
       use couple
-      use coordstorage
       use deriv
       use dipole
       use disgeo
@@ -141,6 +140,7 @@ c
       use vibs
       use warp
       implicit none
+      real*8  wall,cpu    
 c
 c
 c     free memory used by the APBS Poisson-Boltzmann solver
@@ -1239,13 +1239,7 @@ c
 c
 c     deallocation of global arrays from module warp
 c
-      if (allocated(m2))  deallocate (m2)
-c
-c     deallocation of global arrays from module coordstorage
-c
-      if (allocated(coord_array)) deallocate(coord_array)
-      if (allocated(idxandtype)) deallocate(idxandtype)
-      if (allocated(name_array)) deallocate(name_array)      
+      if (allocated(m2))  deallocate (m2) 
 c
 c     may need a pause to avoid closing the execution window
 c
@@ -1253,5 +1247,9 @@ c
          read (input,20)
    20    format ()
       end if
+
+      call gettime (wall,cpu)
+      print *, 'Wall clock time = ', wall
+      print *, 'CPU time = ', cpu
       return
       end

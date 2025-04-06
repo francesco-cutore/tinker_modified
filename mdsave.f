@@ -325,8 +325,5 @@ c
          write (iout,320)
   320    format ()
       end if
-
-      call radialsub
-
       return
       end

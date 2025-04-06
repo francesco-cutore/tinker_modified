@@ -9,8 +9,8 @@ c
       integer savelock
       real*8  rdf_rmax, rdf_width
       logical rdf_intramol
-      character*6 rdf_labelj, rdf_labelk   
-      
+      logical rdf_read_file
+      character*6 rdf_labelj, rdf_labelk      
       integer, allocatable :: hist(:,:)
       real*8, allocatable :: gr(:,:)
       real*8, allocatable :: gs(:,:)

@@ -56,6 +56,7 @@ c
       logical first
       save first
       data first  / .true. /
+      call settime
 c
 c
 c     default unit numbers for input and output

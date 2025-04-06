@@ -26,7 +26,7 @@ c     B. R. Brooks, "Algorithms for Molecular Dynamics at Constant
 c     Temperature and Pressure", DCRT Report, NIH, April 1988
 c
 c
-      subroutine beeman (istep,dt)
+      subroutine beeman (istep,dt,arcstop)
       use atomid
       use atoms
       use freeze
@@ -39,6 +39,7 @@ c
       implicit none
       integer i,j,k
       integer istep
+      logical arcstop
       real*8 dt,dt_x,factor
       real*8 etot,eksum,epot
       real*8 temp,pres
@@ -160,7 +161,12 @@ c
 c     compute statistics and save trajectory for this step
 c
       call mdstat (istep,dt,etot,epot,eksum,temp,pres)
-      call mdsave (istep,dt,epot,eksum)
+      if ( .not. arcstop) then
+         call mdsave (istep,dt,etot,epot,eksum)
+      end if
+      if (arcstop) then
+         call radialsub (istep)
+      end if
       call mdrest (istep)
       return
       end

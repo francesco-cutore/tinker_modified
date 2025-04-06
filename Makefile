@@ -67,8 +67,9 @@ APBS_LIBS = -lapbsmainroutines -lapbs -lmaloc -lapbsblas
 ##  Parallel:  OpenMP
 
 F77 = gfortran
+##F77 = scorep gfortran
 F77FLAGS = -c
-OPTFLAGS = -Ofast -march=native -fopenmp
+OPTFLAGS = -Ofast -march=native -fopenmp -fbacktrace
 ## OPTFLAGS = -Ofast -fopenmp
 ## OPTFLAGS = -Og -g -fbacktrace -fcheck=bounds -Wunused -Wmaybe-uninitialized
 LIBDIR = -L. -L$(TINKER_LIBDIR)/linux -Wl,--no-as-needed -ldl
@@ -152,7 +153,6 @@ OBJS =	action.o \
 	arcedit.o \
 	argue.o \
 	rdfparams.o \
-	coordstorage.o \
 	ascii.o \
 	atmlst.o \
 	atomid.o \
@@ -378,7 +378,6 @@ OBJS =	action.o \
 	gda.o \
 	geometry.o \
 	getarc.o \
-	getarcmodified.o \
 	getcart.o \
 	getdcd.o \
 	getint.o \
@@ -1111,7 +1110,6 @@ libtinker.a: ${OBJS}
 	angtor.o \
 	argue.o \
 	rdfparams.o \
-	coordstorage.o \
 	ascii.o \
 	atmlst.o \
 	atomid.o \
@@ -1327,7 +1325,6 @@ libtinker.a: ${OBJS}
 	freeze.o \
 	geometry.o \
 	getarc.o \
-	getarcmodified.o \
 	getcart.o \
 	getdcd.o \
 	getint.o \
@@ -1666,7 +1663,6 @@ anneal.o: atomid.o atoms.o bath.o bndstr.o bound.o inform.o iounit.o mdstuf.o po
 arcedit.o: atoms.o bound.o files.o inform.o iounit.o output.o usage.o
 argue.o:
 rdfparams.o:
-coordstorage.o:
 ascii.o:
 atmlst.o:
 atomid.o: sizes.o
@@ -1878,7 +1874,7 @@ fftpack.o: math.o
 field.o: fields.o inform.o iounit.o keys.o potent.o sizes.o
 fields.o:
 files.o:
-final.o: align.o analyz.o angang.o angbnd.o angtor.o atmlst.o bitor.o bndstr.o cell.o cflux.o charge.o chgpen.o chgtrn.o chunks.o coordstorage.o couple.o deriv.o dipole.o disgeo.o domega.o expol.o faces.o fft.o fields.o fracs.o freeze.o group.o hessn.o hpmf.o ielscf.o improp.o imptor.o inform.o iounit.o kanang.o kangs.o kantor.o katoms.o kbonds.o kcflux.o kchrge.o kcpen.o kctrn.o kdipol.o kdsp.o kexpl.o keys.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolpr.o kpolr.o krepl.o ksolut.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o light.o limits.o merck.o molcul.o moldyn.o mpole.o mrecip.o mutant.o neigh.o nonpol.o omega.o opbend.o opdist.o orbits.o params.o paths.o pbstuf.o pdb.o piorbs.o pistuf.o pitors.o pme.o polar.o polgrp.o polopt.o polpcg.o poltcg.o potfit.o qmstuf.o refer.o repel.o restrn.o rgddyn.o rdfparams.o rigid.o ring.o rotbnd.o shapes.o socket.o solpot.o solute.o stodyn.o strbnd.o strtor.o syntrn.o tarray.o tettor.o tors.o tortor.o tritor.o uprior.o urey.o usage.o vdw.o vibs.o warp.o
+final.o: align.o analyz.o angang.o angbnd.o angtor.o atmlst.o bitor.o bndstr.o cell.o cflux.o charge.o chgpen.o chgtrn.o chunks.o couple.o deriv.o dipole.o disgeo.o domega.o expol.o faces.o fft.o fields.o fracs.o freeze.o group.o hessn.o hpmf.o ielscf.o improp.o imptor.o inform.o iounit.o kanang.o kangs.o kantor.o katoms.o kbonds.o kcflux.o kchrge.o kcpen.o kctrn.o kdipol.o kdsp.o kexpl.o keys.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolpr.o kpolr.o krepl.o ksolut.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o light.o limits.o merck.o molcul.o moldyn.o mpole.o mrecip.o mutant.o neigh.o nonpol.o omega.o opbend.o opdist.o orbits.o params.o paths.o pbstuf.o pdb.o piorbs.o pistuf.o pitors.o pme.o polar.o polgrp.o polopt.o polpcg.o poltcg.o potfit.o qmstuf.o refer.o repel.o restrn.o rgddyn.o rdfparams.o rigid.o ring.o rotbnd.o shapes.o socket.o solpot.o solute.o stodyn.o strbnd.o strtor.o syntrn.o tarray.o tettor.o tors.o tortor.o tritor.o uprior.o urey.o usage.o vdw.o vibs.o warp.o
 findnuc.o: atomid.o atoms.o bitor.o couple.o
 findpro.o: atomid.o atoms.o bitor.o couple.o
 findseq.o: atomid.o atoms.o bitor.o couple.o inform.o iounit.o sequen.o tettor.o tritor.o
@@ -1890,7 +1886,6 @@ freeze.o:
 gda.o: atoms.o files.o iounit.o minima.o potent.o vdwpot.o warp.o
 geometry.o: atoms.o math.o
 getarc.o: files.o inform.o iounit.o output.o
-getarcmodified.o: files.o inform.o iounit.o output.o
 getcart.o: files.o inform.o iounit.o output.o
 getdcd.o: files.o inform.o iounit.o output.o
 getint.o: atoms.o files.o inform.o iounit.o output.o
@@ -2118,7 +2113,7 @@ prtprm.o: angpot.o bndpot.o chgpot.o fields.o kanang.o kangs.o kantor.o katoms.o
 prtseq.o: files.o sequen.o
 prtuind.o: atomid.o atoms.o bound.o boxes.o couple.o files.o inform.o polar.o potent.o solpot.o titles.o units.o
 prtvel.o: atomid.o atoms.o bound.o boxes.o couple.o files.o inform.o moldyn.o titles.o
-prtxyz.o: atomid.o atoms.o bound.o boxes.o couple.o files.o inform.o titles.o coordstorage.o
+prtxyz.o: atomid.o atoms.o bound.o boxes.o couple.o files.o inform.o titles.o
 pss.o: atoms.o files.o hescut.o inform.o iounit.o math.o omega.o refer.o tree.o warp.o zcoord.o
 pssrigid.o: atoms.o files.o group.o inform.o iounit.o math.o minima.o molcul.o refer.o rigid.o sizes.o warp.o
 pssrot.o: atoms.o files.o inform.o iounit.o math.o minima.o omega.o refer.o warp.o zcoord.o
