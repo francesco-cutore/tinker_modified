@@ -30,7 +30,6 @@ c
       use math
       use molcul
       use potent
-
       use rdfparams
       
       implicit none
@@ -40,6 +39,7 @@ c
       integer counter
       integer mean
       integer nbin
+      integer i
       real*8 rmax,width
       logical exist,query
       logical intramol
@@ -47,7 +47,6 @@ c
       character*1 answer
       integer freeunit
       integer unit
-      character*6 labelj,labelk
       character*240 record
       character*240 string
 c
@@ -58,6 +57,7 @@ c
       step = 1
       counter = 1
       savelock = 0
+      rdf_num = 1
       read_file = .true.
       query = .true.
       call nextarg (string,exist)
@@ -72,27 +72,62 @@ c
    10 continue
       if (query) then
          write (iout,20)
-   20    format (/,' Enter ',
-     &              ' Mean :  ',$)
+   20    format (/,' Enter mean and num   ',
+     &              'of rdfs :  ',$)
          read (input,30)  record
    30    format (a240)
-         read (record,*,err=40,end=40)  mean
+         read (record,*,err=40,end=40)  mean, rdf_num
    40    continue
       end if      
 c
 c     get the names of the atoms to be used in rdf computation
 c
-      call nextarg (labelj,exist)
-      call nextarg (labelk,exist)
-      if (.not. exist) then
+      allocate (rdf_labelj(rdf_num))
+      allocate (rdf_labelk(rdf_num))
+      allocate (rdf_namej(rdf_num))
+      allocate (rdf_namek(rdf_num))
+      allocate (rdf_typej(rdf_num))
+      allocate (rdf_typek(rdf_num))  
+c
+c     set 0 the arrays
+c
+      rdf_labelj = '      '
+      rdf_labelk = '      '
+      rdf_namej  = '   '
+      rdf_namek  = '   '
+      rdf_typej  = -1
+      rdf_typek  = -1
+
+      do i=1, rdf_num
          write (iout,50)
    50    format (/,' Enter 1st & 2nd Atom Names or Type Numbers :  ',$)
          read (input,60)  record
    60    format (a240)
          next = 1
-         call gettext (record,labelj,next)
-         call gettext (record,labelk,next)
-      end if
+         call gettext (record,rdf_labelj(i),next)
+         call gettext (record,rdf_labelk(i),next)
+      end do
+c
+c     convert the labels to either atom names or type numbers
+c
+      do i=1, rdf_num
+         read (rdf_labelj(i),
+     &        *,err=70,end=70)  rdf_typej(i)
+   70    continue
+         if (rdf_typej(i) .le. 0) then
+         next = 1
+         call gettext (rdf_labelj(i),
+     &         rdf_namej(i),next)
+         end if
+         read (rdf_labelk(i),
+     &        *,err=80,end=80)  rdf_typek(i)
+   80    continue
+         if (rdf_typek(i) .le. 0) then
+         next = 1
+         call gettext (rdf_labelk(i),
+     &        rdf_namek(i),next)
+         end if
+      end do      
 c
 c     get maximum distance from input or minimum image convention
 c
@@ -170,8 +205,6 @@ c
 c
 c     store values in the module for later use by radialsub
 c
-      rdf_labelj = labelj
-      rdf_labelk = labelk
       rdf_rmax = rmax
       rdf_width = width
       rdf_intramol = intramol
@@ -182,11 +215,11 @@ c
 c
 c     allocate hist, gr, and gs arrays
 c
-        allocate(hist(nbin, rdf_mean))
-        allocate(gr(nbin, rdf_mean))
-        allocate(gs(nbin, rdf_mean))
-        allocate(gr_mean(nbin))
-        allocate(gs_mean(nbin))
+        allocate(hist(nbin,rdf_mean,rdf_num))
+        allocate(gr(nbin,rdf_mean,rdf_num))
+        allocate(gs(nbin,rdf_mean,rdf_num))
+        allocate(gr_mean(nbin,rdf_num))
+        allocate(gs_mean(nbin,rdf_num))
       
       hist = 0
       gr = 0.0d0

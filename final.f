@@ -1044,6 +1044,12 @@ c
       if (allocated(gs))  deallocate (gs)
       if (allocated(gr_mean))  deallocate (gr_mean)
       if (allocated(gs_mean))  deallocate (gs_mean)
+      if (allocated(rdf_labelj)) deallocate (rdf_labelj)
+      if (allocated(rdf_labelk)) deallocate (rdf_labelk)
+      if (allocated(rdf_typej)) deallocate (rdf_typej)
+      if (allocated(rdf_typek)) deallocate (rdf_typek)
+      if (allocated(rdf_namej)) deallocate (rdf_namej)
+      if (allocated(rdf_namek)) deallocate (rdf_namek)
 c
 c     deallocation of global arrays from module refer
 c

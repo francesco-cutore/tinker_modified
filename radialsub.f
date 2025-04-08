@@ -30,13 +30,10 @@ c
       use math
       use molcul
       use potent
-
       use rdfparams
-
       implicit none
-      integer i,j,k
+      integer i,j,k,f
       integer nframe
-      integer next
       integer molj,molk
       integer numj,numk
       integer typej,typek
@@ -53,48 +50,32 @@ c
       logical intramol
       character*3 namej,namek
       character*6 labelj,labelk
-c     open the trajectory archive and read the initial frame
+
+      logical use_vdw_temp
+      logical use_charge_temp
+      logical use_dipole_temp
+      logical use_mpole_temp
+      logical use_ewald_temp
+      real*8 vdwcut_temp
 c
-c      call getarcmodified (iarc)
+c     store current cutoffs
 c
-c     get the unitcell parameters and number of molecules
-c
-c      call unitcell
-c      call molecule
+         use_vdw_temp = use_vdw
+         use_charge_temp = use_charge
+         use_dipole_temp = use_dipole
+         use_mpole_temp = use_mpole
+         use_ewald_temp = use_ewald
+         vdwcut_temp = vdwcut
 c
 c     set cutoffs small to enforce use of minimum images
 c
-c!!      use_vdw = .true.
-c!!      use_charge = .false.
-c!!      use_dipole = .false.
-c!!      use_mpole = .false.
-c!!     use_ewald = .false.
-c!!     vdwcut = 0.01d0
-c!!     call lattice
-c
-c     get the names of the atoms to be used in rdf computation
-c
-      labelj = rdf_labelj
-      labelk = rdf_labelk
-c
-c     convert the labels to either atom names or type numbers
-c
-      namej = '   '
-      typej = -1
-      read (labelj,*,err=70,end=70)  typej
-   70 continue
-      if (typej .le. 0) then
-         next = 1
-         call gettext (labelj,namej,next)
-      end if
-      namek = '   '
-      typek = -1
-      read (labelk,*,err=80,end=80)  typek
-   80 continue
-      if (typek .le. 0) then
-         next = 1
-         call gettext (labelk,namek,next)
-      end if
+      use_vdw = .true.
+      use_charge = .false.
+      use_dipole = .false.
+      use_mpole = .false.
+      use_ewald = .false.
+      vdwcut = 0.01d0
+c!!      call lattice
 c
 c     get maximum distance from input or minimum image convention
 c
@@ -116,11 +97,19 @@ c     if ctn is greater than rdf_mean then ctn = 1
 c
       if (ctn > rdf_mean) then
          ctn = 1
-      end if    
+      end if
+c          
 c     mypart :):)
+c
       istep = istep
+      do f = 1, rdf_num
+         namej = rdf_namej(f)
+         namek = rdf_namek(f)
+         typej = rdf_typej(f)
+         typek = rdf_typek(f)
+         labelj = rdf_labelj(f)
+         labelk = rdf_labelk(f)
 
-c      print *, 'USING ARRAYS', istep      
          do j = 1, n
             if (name(j).eq.namej .or. 
      &          type(j).eq.typej) then
@@ -141,7 +130,7 @@ c      print *, 'USING ARRAYS', istep
                            rjk = sqrt(dx*dx + dy*dy + dz*dz)
                            bin = int(rjk/width) + 1
                            if (bin .le. nbin)
-     &                         hist(bin,ctn) = hist(bin,ctn) + 1
+     &                         hist(bin,ctn,f) = hist(bin,ctn,f) + 1
                         end if
                      end if
                   end if
@@ -176,35 +165,40 @@ c
                rupper = dble(i) * width
                rlower = rupper - width
                expect = factor * (rupper**3 - rlower**3)
-               gr(i,ctn) = dble(hist(i,ctn)) / expect
-               hist(i,ctn) = 0
+               gr(i,ctn,f) = dble(hist(i,ctn,f)) / expect
+               hist(i,ctn,f) = 0
             end do
          end if   
 c
 c     find the 5th degree polynomial smoothed distribution function
 c
       if (nbin .ge. 5) then
-         gs(1,ctn) = (69.0d0*gr(1,ctn) + 4.0d0*gr(2,ctn) 
-     &             - 6.0d0*gr(3,ctn)   + 4.0d0*gr(4,ctn)
-     &             - gr(5,ctn)) / 70.0d0
-         gs(2,ctn) = (2.0d0*gr(1,ctn) + 27.0d0*gr(2,ctn)
-     &             + 12.0d0*gr(3,ctn) - 8.0d0*gr(4,ctn)
-     &             + 2.0d0*gr(5,ctn)) / 35.0d0
+         gs(1,ctn,f) = (69.0d0*gr(1,ctn,f) + 4.0d0*gr(2,ctn,f) 
+     &             - 6.0d0*gr(3,ctn,f)   + 4.0d0*gr(4,ctn,f)
+     &             - gr(5,ctn,f)) / 70.0d0
+         gs(2,ctn,f) = (2.0d0*gr(1,ctn,f) + 27.0d0*gr(2,ctn,f)
+     &             + 12.0d0*gr(3,ctn,f) - 8.0d0*gr(4,ctn,f)
+     &             + 2.0d0*gr(5,ctn,f)) / 35.0d0
          do i = 3, nbin-2
-            gs(i,ctn) = (-3.0d0*gr((i-2),ctn) + 12.0d0*gr((i-1),ctn)
-     &                + 17.0d0*gr(i,ctn) + 12.0d0*gr((i+1),ctn)
-     &                - 3.0d0*gr((i+2),ctn)) / 35.0d0
+            gs(i,ctn,f) = (-3.0d0*gr((i-2),ctn,f) 
+     &                + 12.0d0*gr((i-1),ctn,f)
+     &                + 17.0d0*gr(i,ctn,f)
+     &                + 12.0d0*gr((i+1),ctn,f)
+     &                - 3.0d0*gr((i+2),ctn,f)) / 35.0d0
          end do
-         gs((nbin-1),ctn) = (2.0d0*gr((nbin-4),ctn) 
-     &                    - 8.0d0*gr((nbin-3),ctn)
-     &                    + 12.0d0*gr((nbin-2),ctn) 
-     &                    + 27.0d0*gr((nbin-1),ctn)
-     &                    + 2.0d0*gr(nbin,ctn)) / 35.0d0
-         gs(nbin,ctn) = (-gr((nbin-4),ctn) + 4.0d0*gr((nbin-3),ctn) 
-     6                - 6.0d0*gr((nbin-2),ctn) + 4.0d0*gr((nbin-1),ctn)
-     &                + 69.0d0*gr(nbin,ctn)) / 70.0d0
+         gs((nbin-1),ctn,f) = (2.0d0*gr((nbin-4),ctn,f) 
+     &                    - 8.0d0*gr((nbin-3),ctn,f)
+     &                    + 12.0d0*gr((nbin-2),ctn,f) 
+     &                    + 27.0d0*gr((nbin-1),ctn,f)
+     &                    + 2.0d0*gr(nbin,ctn,f)) / 35.0d0
+         gs(nbin,ctn,f) = (-gr((nbin-4),ctn,f) 
+     &                + 4.0d0*gr((nbin-3),ctn,f) 
+     &                - 6.0d0*gr((nbin-2),ctn,f) 
+     &                + 4.0d0*gr((nbin-1),ctn,f)
+     &                + 69.0d0*gr(nbin,ctn,f)) 
+     &                / 70.0d0
          do i = 1, nbin
-            gs(i,ctn) = max(0.0d0,gs(i,ctn))
+            gs(i,ctn,f) = max(0.0d0,gs(i,ctn,f))
          end do
       end if
       
@@ -215,34 +209,45 @@ c
 c
 c     open the output file only to write the mean
 c
-      if (savelock .eq. 1) then
-            gr_mean = 0.0d0
-            gs_mean = 0.0d0
-         do i = 1, size(gr, 1)
-            do j = 1, rdf_mean
-               gr_mean(i) = gr_mean(i) + gr(i, j)
-               gs_mean(i) = gs_mean(i) + gs(i, j)
+         if (savelock .eq. 1) then
+               gr_mean = 0.0d0
+               gs_mean = 0.0d0
+            do i = 1, size(gr, 1)
+               do j = 1, rdf_mean
+                  gr_mean(i,f) = gr_mean(i,f) + gr(i,j,f)
+                  gs_mean(i,f) = gs_mean(i,f) + gs(i,j,f)
+               end do
+               gr_mean(i,f) = gr_mean(i,f) / dble(rdf_mean)
+               gs_mean(i,f) = gs_mean(i,f) / dble(rdf_mean)
             end do
-            gr_mean(i) = gr_mean(i) / dble(rdf_mean)
-            gs_mean(i) = gs_mean(i) / dble(rdf_mean)
-         end do
 
-         unit = freeunit ()
-         open(unit,file='rdf.txt',status='unknown',position='append')
-         write (unit,220)  labelj,labelk
+            unit = freeunit ()
+            open(unit,file='rdf.txt',status='unknown',position='append')
+            write (unit,220)  labelj,labelk
   220    format (/,' Pairwise Radial Distribution Function :'
      &        //,7x,'First Name or Type :  ',a6,
      &           5x,'Second Name or Type :  ',a6)
-         write (unit,230)
+            write (unit,230)
   230    format (/,5x,'Bin',9x,'Counts',7x,'Distance',7x,'Raw g(r)',
      &           4x,'Smooth g(r)',/)
-         do i = 1, nbin
-            write (unit,240)  i,hist(i,ctn),
-     &         (dble(i)-0.5d0)*width,gr_mean(i),gs_mean(i)
+            do i = 1, nbin
+               write (unit,240)  i,hist(i,ctn,f),
+     &         (dble(i)-0.5d0)*width,gr_mean(i,f),gs_mean(i,f)
   240    format (i8,i15,3x,f12.4,3x,f12.4,3x,f12.4)
-         end do 
-         close(unit)
-      end if   
+            end do 
+            close(unit)
+         end if 
+      end do     
 
       ctn = ctn + 1
+c
+c     reset the cutoffs
+c      
+         use_vdw = use_vdw_temp
+         use_charge = use_charge_temp
+         use_dipole = use_dipole_temp
+         use_mpole = use_mpole_temp
+         use_ewald = use_ewald_temp
+         vdwcut = vdwcut_temp 
+         
       end   
