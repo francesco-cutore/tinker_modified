@@ -4,14 +4,20 @@ c
       module rdfparams
       implicit none
 
-      integer rdf_start, rdf_stop, rdf_step, ctn
+      integer ctn
+      integer NN
+      integer sfac_nbins
+      integer sfac_nbins_u
+      integer tot_bins
+      integer max_vect
       integer rdf_mean, rdf_nbin
       integer savelock
       integer rdf_num
       real*8  rdf_rmax, rdf_width
+      real*8  q_min_temp, q_step 
+      real*8  q_max_up, q_step_up
       logical rdf_intramol
-      logical rdf_read_file
-c      character*6 rdf_labelj, rdf_labelk 
+      logical rdf_read_file, rdf_smooth 
       character*6, allocatable :: rdf_labelj(:)
       character*6, allocatable :: rdf_labelk(:)
       character*3, allocatable :: rdf_namej(:)
@@ -23,5 +29,8 @@ c      character*6 rdf_labelj, rdf_labelk
       real*8, allocatable :: gs(:,:,:)
       real*8, allocatable :: gr_mean(:,:)
       real*8, allocatable :: gs_mean(:,:)
-
+      real*8, allocatable :: Sij(:,:)
+      real*8, allocatable :: S(:)
+      real*8, allocatable :: S_hist(:,:,:)
+      real*8, allocatable :: q_vec(:,:)
       end module rdfparams

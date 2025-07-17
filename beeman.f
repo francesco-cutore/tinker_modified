@@ -165,7 +165,9 @@ c
          call mdsave (istep,dt,etot,epot,eksum)
       end if
       if (arcstop) then
-         call radialsub (istep)
+c         call radialsub (istep)
+          call structfactor_direct(istep)
+c      call structfactor_direct_spherical(istep)
       end if
       call mdrest (istep)
       return

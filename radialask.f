@@ -49,27 +49,32 @@ c
       integer unit
       character*240 record
       character*240 string
-c
+
+      real*8 q_min
+      real*8 q_max
+      real*8 q_threshold
+      real*8 decimation_power
+
 c     get numbers of the coordinate frames to be processed
 c
+
+      NN = 610
+      q_max = 6.0d0
+      q_max_up = 6.0d0
+      q_step_up = 0.01d0
+      q_min_temp = 0.42d0
+      q_step = 0.1d0
+      q_threshold = 1.0d0
+      decimation_power = 2.0d0
       start = 1
       stop = 1
       step = 1
       counter = 1
       savelock = 0
       rdf_num = 1
+      rdf_smooth = .true.
       read_file = .true.
       query = .true.
-      call nextarg (string,exist)
-      if (exist) then
-         read (string,*,err=10,end=10)  start
-         query = .false.
-      end if
-      call nextarg (string,exist)
-      if (exist)  read (string,*,err=10,end=10)  stop
-      call nextarg (string,exist)
-      if (exist)  read (string,*,err=10,end=10)  step
-   10 continue
       if (query) then
          write (iout,20)
    20    format (/,' Enter mean and num   ',
@@ -197,7 +202,16 @@ c
       open(unit,file='rdf.txt',status='unknown')
       write(unit,170)
   170 format ('on the fly rdf calculation') 
-      close(unit)     
+      close(unit) 
+c
+c     overwrite rdf.txt file
+c
+      unit = freeunit ()
+      open(unit,file='st.txt',status='unknown')
+      write(unit, 180) 
+  180 format(/,' Direct Structure Factor - Sliding Window Average',
+     &          /,' q-value (Å⁻¹)    S(q) (sliding avg)',/)
+      close(unit)      
 c
 c     set the number of distance bins to be accumulated
 c
@@ -213,6 +227,13 @@ c
       rdf_nbin = nbin
 
 c
+c     define minimum q value for direct structure factor calculation
+c
+      q_min = int(2*pi / (rdf_rmax * rdf_width))
+      print *, 'q_min = ', q_min
+
+
+c
 c     allocate hist, gr, and gs arrays
 c
         allocate(hist(nbin,rdf_mean,rdf_num))
@@ -220,11 +241,19 @@ c
         allocate(gs(nbin,rdf_mean,rdf_num))
         allocate(gr_mean(nbin,rdf_num))
         allocate(gs_mean(nbin,rdf_num))
+        allocate (Sij(NN,rdf_num))
+        allocate (S(NN))
+        allocate (S_hist(NN,rdf_mean,rdf_num))
       
       hist = 0
       gr = 0.0d0
       gs = 0.0d0
       gr_mean = 0.0d0
       gs_mean = 0.0d0
+      S_hist = 0.0d0
       
+      call generate_qshell (q_max, q_min_temp, q_step,
+     &      q_max_up, q_step_up)
+      call decimation (q_threshold, decimation_power,q_max)
+
       end

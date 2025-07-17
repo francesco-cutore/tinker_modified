@@ -69,8 +69,9 @@ APBS_LIBS = -lapbsmainroutines -lapbs -lmaloc -lapbsblas
 F77 = gfortran
 ##F77 = scorep gfortran
 F77FLAGS = -c
-OPTFLAGS = -Ofast -march=native -fopenmp -fbacktrace
-## OPTFLAGS = -Ofast -fopenmp
+## original one OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
+OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
+## OPTFLAGS = -Ofast -march=native -fopenmp
 ## OPTFLAGS = -Og -g -fbacktrace -fcheck=bounds -Wunused -Wmaybe-uninitialized
 LIBDIR = -L. -L$(TINKER_LIBDIR)/linux -Wl,--no-as-needed -ldl
 LIBS = 
@@ -153,6 +154,7 @@ OBJS =	action.o \
 	arcedit.o \
 	argue.o \
 	rdfparams.o \
+	factors.o \
 	ascii.o \
 	atmlst.o \
 	atomid.o \
@@ -617,6 +619,9 @@ OBJS =	action.o \
 	quatfit.o \
 	radial.o \
 	radialsub.o \
+	structfactor_direct.o \
+	generate_qshell.o \
+	decimation.o \
 	radialask.o \
 	random.o \
 	rattle.o \
@@ -1110,6 +1115,7 @@ libtinker.a: ${OBJS}
 	angtor.o \
 	argue.o \
 	rdfparams.o \
+	factors.o \
 	ascii.o \
 	atmlst.o \
 	atomid.o \
@@ -1541,6 +1547,9 @@ libtinker.a: ${OBJS}
 	random.o \
 	rattle.o \
 	radialsub.o \
+	structfactor_direct.o \
+	generate_qshell.o \
+	decimation.o \
 	radialask.o \
 	readcart.o \
 	readdcd.o \
@@ -1663,6 +1672,7 @@ anneal.o: atomid.o atoms.o bath.o bndstr.o bound.o inform.o iounit.o mdstuf.o po
 arcedit.o: atoms.o bound.o files.o inform.o iounit.o output.o usage.o
 argue.o:
 rdfparams.o:
+factors.o:
 ascii.o:
 atmlst.o:
 atomid.o: sizes.o
@@ -2122,8 +2132,11 @@ qmstuf.o:
 qrsolve.o:
 quatfit.o: align.o
 radial.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o
-radialsub.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o rdfparams.o
-radialask.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o rdfparams.o
+radialsub.o: atomid.o atoms.o bound.o boxes.o limits.o math.o molcul.o potent.o rdfparams.o
+structfactor_direct.o: atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o math.o molcul.o potent.o rdfparams.o
+generate_qshell.o: rdfparams.o
+decimation.o: rdfparams.o
+radialask.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o rdfparams.o factors.o
 random.o: inform.o iounit.o keys.o math.o
 rattle.o: atomid.o atoms.o freeze.o group.o inform.o iounit.o moldyn.o units.o usage.o virial.o
 readcart.o: output.o
