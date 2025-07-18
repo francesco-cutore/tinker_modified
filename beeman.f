@@ -166,8 +166,8 @@ c
       end if
       if (arcstop) then
 c         call radialsub (istep)
-          call structfactor_direct(istep)
-c      call structfactor_direct_spherical(istep)
+c          call structfactor_direct(istep)
+      call structfactor_direct_spherical(istep)
       end if
       call mdrest (istep)
       return

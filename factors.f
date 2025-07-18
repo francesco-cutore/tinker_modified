@@ -26,6 +26,12 @@ c                print *, 'atomFelse', atomF
 c            end if
             return
         end function atomF
+
+        integer function get_pair_index(alpha, beta, n_species)
+        implicit none
+        integer, intent(in) :: alpha, beta, n_species
+        get_pair_index = (alpha - 1) * n_species + beta
+        end function
         
         
         
@@ -35,7 +41,7 @@ c            end if
                 character nome*2
 c                print *, 'nome ' , nome
                 SELECT CASE (nome)
-                CASE ('H')
+                CASE ('H ')
                     a1 = 0.489918
                     b1 = 20.65930
                     a2 = 0.262003
@@ -105,7 +111,7 @@ c                print *, 'nome ' , nome
                     a4 = 1.16630
                     b4 = 0.58260
                     c  = -11.52900 
-                    CASE ('O')
+                    CASE ('O ')
                     a1 = 3.04850
                     b1 = 13.27710
                     a2 = 2.28680

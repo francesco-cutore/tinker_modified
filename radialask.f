@@ -52,13 +52,15 @@ c
 
       real*8 q_min
       real*8 q_max
+      real*8 q_spat
       real*8 q_threshold
       real*8 decimation_power
 
 c     get numbers of the coordinate frames to be processed
 c
 
-      NN = 610
+      NN = 600
+      q_spat = 0.04d0
       q_max = 6.0d0
       q_max_up = 6.0d0
       q_step_up = 0.01d0
@@ -230,7 +232,7 @@ c
 c     define minimum q value for direct structure factor calculation
 c
       q_min = int(2*pi / (rdf_rmax * rdf_width))
-      print *, 'q_min = ', q_min
+      print *, 'remember to adjust = ', q_min
 
 
 c
@@ -253,7 +255,7 @@ c
       S_hist = 0.0d0
       
       call generate_qshell (q_max, q_min_temp, q_step,
-     &      q_max_up, q_step_up)
+     & q_spat)
       call decimation (q_threshold, decimation_power,q_max)
 
       end

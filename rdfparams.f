@@ -7,8 +7,6 @@ c
       integer ctn
       integer NN
       integer sfac_nbins
-      integer sfac_nbins_u
-      integer tot_bins
       integer max_vect
       integer rdf_mean, rdf_nbin
       integer savelock

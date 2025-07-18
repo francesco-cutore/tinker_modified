@@ -69,8 +69,8 @@ APBS_LIBS = -lapbsmainroutines -lapbs -lmaloc -lapbsblas
 F77 = gfortran
 ##F77 = scorep gfortran
 F77FLAGS = -c
-## original one OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
-OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
+ OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
+## OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
 ## OPTFLAGS = -Ofast -march=native -fopenmp
 ## OPTFLAGS = -Og -g -fbacktrace -fcheck=bounds -Wunused -Wmaybe-uninitialized
 LIBDIR = -L. -L$(TINKER_LIBDIR)/linux -Wl,--no-as-needed -ldl
@@ -2133,7 +2133,7 @@ qrsolve.o:
 quatfit.o: align.o
 radial.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o
 radialsub.o: atomid.o atoms.o bound.o boxes.o limits.o math.o molcul.o potent.o rdfparams.o
-structfactor_direct.o: atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o math.o molcul.o potent.o rdfparams.o
+structfactor_direct.o: atomid.o atoms.o rdfparams.o factors.o
 generate_qshell.o: rdfparams.o
 decimation.o: rdfparams.o
 radialask.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o rdfparams.o factors.o
