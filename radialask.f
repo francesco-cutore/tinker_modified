@@ -31,110 +31,112 @@ c
       use molcul
       use potent
       use rdfparams
+      use factors
+      use atom_sort
       
       implicit none
-      integer next
-      integer start,stop
-      integer step
-      integer counter
-      integer mean
-      integer nbin
-      integer i
-      real*8 rmax,width
+      integer slw                                   ! sliding window size
+      integer i, j
+      real*8 rmax
       logical exist,query
-      logical intramol
       logical read_file
-      character*1 answer
       integer freeunit
       integer unit
       character*240 record
       character*240 string
 
       real*8 q_min
-      real*8 q_max
-      real*8 q_spat
-      real*8 q_threshold
-      real*8 decimation_power
+      real*8, parameter :: q_max = 10.0d0          ! Maximum q value
+      real*8, parameter :: q_spat = 0.1d0             ! Spatial bin size
+      real*8, parameter :: q_aggr = 1.5d0             ! Overgeneration maximum q value
+      real*8, parameter :: force = 1.0d0              ! Force of overgeneration
+      real*8, parameter :: q_threshold = 2.0d0        ! Threshold for decimation
+      real*8, parameter :: decimation_power = 2.0d0   ! Power for decimation
+      logical, parameter :: sort = .false.
 
-c     get numbers of the coordinate frames to be processed
-c
+c     for the counter
+      integer num_unique
+      logical is_new 
+      character :: unique(n)
 
-      NN = 600
-      q_spat = 0.04d0
-      q_max = 6.0d0
-      q_max_up = 6.0d0
-      q_step_up = 0.01d0
-      q_min_temp = 0.42d0
+c     global variables
+
+      rdf_sort = sort      
+
       q_step = 0.1d0
-      q_threshold = 1.0d0
-      decimation_power = 2.0d0
-      start = 1
-      stop = 1
-      step = 1
-      counter = 1
+      q_min = 4 * pi / (xbox)
+      NN = int(q_max * (10.0d0 / q_step))
+      ctn = 1
       savelock = 0
       rdf_num = 1
-      rdf_smooth = .true.
       read_file = .true.
       query = .true.
       if (query) then
          write (iout,20)
-   20    format (/,' Enter mean and num   ',
-     &              'of rdfs :  ',$)
+   20    format (/,' Enter dimension of the',
+     &              ' sliding window:  ',$)
          read (input,30)  record
    30    format (a240)
-         read (record,*,err=40,end=40)  mean, rdf_num
+         read (record,*,err=40,end=40)  slw
    40    continue
-      end if      
-c
-c     get the names of the atoms to be used in rdf computation
-c
-      allocate (rdf_labelj(rdf_num))
-      allocate (rdf_labelk(rdf_num))
-      allocate (rdf_namej(rdf_num))
-      allocate (rdf_namek(rdf_num))
-      allocate (rdf_typej(rdf_num))
-      allocate (rdf_typek(rdf_num))  
-c
-c     set 0 the arrays
-c
-      rdf_labelj = '      '
-      rdf_labelk = '      '
-      rdf_namej  = '   '
-      rdf_namek  = '   '
-      rdf_typej  = -1
-      rdf_typek  = -1
+      end if
 
-      do i=1, rdf_num
-         write (iout,50)
-   50    format (/,' Enter 1st & 2nd Atom Names or Type Numbers :  ',$)
-         read (input,60)  record
-   60    format (a240)
-         next = 1
-         call gettext (record,rdf_labelj(i),next)
-         call gettext (record,rdf_labelk(i),next)
+      print *, 'names' 
+      do i = 1, n
+          print *, trim(name(i))
       end do
+
+      if (sort) then
+            call prepare_atom_sort() 
+            call apply_sorted_order()
+      endif      
+c             
+c     count number of different occurrences of atom names
 c
-c     convert the labels to either atom names or type numbers
+      num_unique = 0
+      do i = 1, n
+      is_new = .true.
+            do j = 1, num_unique
+                  if (trim(name(i)) == trim(unique(j))) then
+                        is_new = .false.
+                        exit
+                  end if
+            end do
+            if (is_new) then
+               num_unique = num_unique + 1
+               unique(num_unique) = trim(name(i))
+            end if
+      end do
+      
+      n_species = num_unique
 c
-      do i=1, rdf_num
-         read (rdf_labelj(i),
-     &        *,err=70,end=70)  rdf_typej(i)
-   70    continue
-         if (rdf_typej(i) .le. 0) then
-         next = 1
-         call gettext (rdf_labelj(i),
-     &         rdf_namej(i),next)
-         end if
-         read (rdf_labelk(i),
-     &        *,err=80,end=80)  rdf_typek(i)
-   80    continue
-         if (rdf_typek(i) .le. 0) then
-         next = 1
-         call gettext (rdf_labelk(i),
-     &        rdf_namek(i),next)
-         end if
-      end do      
+c     Map atoms to type index AND count occurrences 
+c
+      allocate(atype(n))
+      allocate(mole_fractions(n_species))
+      mole_fractions = 0.0d0
+
+      do i = 1, n
+          do j = 1, n_species
+              ! If the name from the original list matches a name in our unique key...
+              if (trim(name(i)) == trim(unique(j))) then
+                  atype(i) = j  ! ...store its type index
+                  
+                  ! ...and increment the count for that type
+                  mole_fractions(j) = mole_fractions(j) + 1.0d0 
+                  
+                  exit ! Move to the next atom (i)
+              end if
+          end do
+      end do
+      if (sort) then
+            call apply_original_order()
+      endif
+c
+c     Normalize counts to get mole fractions ---
+c
+      mole_fractions = mole_fractions / dble(n)
+
 c
 c     get maximum distance from input or minimum image convention
 c
@@ -163,48 +165,8 @@ c
      &                         zbox2*beta_sin)
          rmax = 0.95d0 * rmax
       end if
-c
-c     get the desired width of the radial distance bins
-c
-      width = -1.0d0
-      query = .true.
-      call nextarg (string,exist)
-      if (exist) then
-         read (string,*,err=120,end=120)  width
-         query = .false.
-      end if
-  120 continue
-      if (query) then
-         write (iout,130)
-  130    format (/,' Enter Width of Distance Bins [0.01 Ang] :  ',$)
-         read (input,140)  width
-  140    format (f20.0)
-      end if
-      if (width .le. 0.0d0)  width = 0.01d0
-c
-c     decide whether to restrict to intermolecular atom pairs
-c
-      intramol = .false.
-      call nextarg (answer,exist)
-      if (.not. exist) then
-         write (iout,150)
-  150    format (/,' Include Intramolecular Pairs in Distribution',
-     &              ' [N] :  ',$)
-         read (input,160)  record
-  160    format (a240)
-         next = 1
-         call gettext (record,answer,next)
-      end if
-      call upcase (answer)
-      if (answer .eq. 'Y')  intramol = .true.
-c
-c     overwrite rdf.txt file
-c
-      unit = freeunit ()
-      open(unit,file='rdf.txt',status='unknown')
-      write(unit,170)
-  170 format ('on the fly rdf calculation') 
-      close(unit) 
+
+      rdf_mean = slw
 c
 c     overwrite rdf.txt file
 c
@@ -214,48 +176,21 @@ c
   180 format(/,' Direct Structure Factor - Sliding Window Average',
      &          /,' q-value (Å⁻¹)    S(q) (sliding avg)',/)
       close(unit)      
-c
-c     set the number of distance bins to be accumulated
-c
-      nbin = int(rmax/width)   
-c
-c     store values in the module for later use by radialsub
-c
-      rdf_rmax = rmax
-      rdf_width = width
-      rdf_intramol = intramol
-      ctn = counter
-      rdf_mean = mean
-      rdf_nbin = nbin
 
-c
-c     define minimum q value for direct structure factor calculation
-c
-      q_min = int(2*pi / (rdf_rmax * rdf_width))
-      print *, 'remember to adjust = ', q_min
-
-
-c
-c     allocate hist, gr, and gs arrays
-c
-        allocate(hist(nbin,rdf_mean,rdf_num))
-        allocate(gr(nbin,rdf_mean,rdf_num))
-        allocate(gs(nbin,rdf_mean,rdf_num))
-        allocate(gr_mean(nbin,rdf_num))
-        allocate(gs_mean(nbin,rdf_num))
-        allocate (Sij(NN,rdf_num))
-        allocate (S(NN))
-        allocate (S_hist(NN,rdf_mean,rdf_num))
+      allocate (S_hist(NN,rdf_mean,rdf_num))
+      allocate (q_magnitude(NN))
       
-      hist = 0
-      gr = 0.0d0
-      gs = 0.0d0
-      gr_mean = 0.0d0
-      gs_mean = 0.0d0
       S_hist = 0.0d0
-      
-      call generate_qshell (q_max, q_min_temp, q_step,
-     & q_spat)
+
+      ! Only compute q_magnitude once, outside this routine if possible
+      do i = 1, NN
+            q_magnitude(i) =  (i) * q_step / 10.0d0
+      end do
+
+      call generate_qshell_imp (q_max, q_min, q_step,
+     & q_spat, q_aggr, force)
       call decimation (q_threshold, decimation_power,q_max)
+
+      call precompute_form_factors()
 
       end

@@ -39,6 +39,7 @@ c
       use domega
       use expol
       use faces
+      use factors
       use fft
       use fields
       use fracs
@@ -415,6 +416,11 @@ c
       if (allocated(fqa))  deallocate (fqa)
       if (allocated(fqncy))  deallocate (fqncy)
       if (allocated(fqcy))  deallocate (fqcy)
+c
+c     deallocation of global arrays from module factors
+c     
+      if (allocated(pc_fa))  deallocate (pc_fa)
+      if (allocated(pc_favg_sq))  deallocate (pc_favg_sq) 
 c
 c     deallocation of global arrays from module fft
 c
@@ -1039,21 +1045,12 @@ c
 c
 c     deallocation of global arrays from module rdfparams
 c      
-      if (allocated(hist)) deallocate (hist)
-      if (allocated(gr))  deallocate (gs)
-      if (allocated(gs))  deallocate (gs)
-      if (allocated(gr_mean))  deallocate (gr_mean)
-      if (allocated(gs_mean))  deallocate (gs_mean)
-      if (allocated(S))  deallocate (S)
-      if (allocated(Sij)) deallocate (Sij)
+      if (allocated(q_magnitude)) deallocate (q_magnitude)
       if (allocated(S_hist)) deallocate (S_hist)
-      if (allocated(rdf_labelj)) deallocate (rdf_labelj)
-      if (allocated(rdf_labelk)) deallocate (rdf_labelk)
-      if (allocated(rdf_typej)) deallocate (rdf_typej)
-      if (allocated(rdf_typek)) deallocate (rdf_typek)
-      if (allocated(rdf_namej)) deallocate (rdf_namej)
-      if (allocated(rdf_namek)) deallocate (rdf_namek)
+      if(allocated(atype)) deallocate (atype)
       if( allocated(q_vec)) deallocate (q_vec)
+      if(allocated(q_magnitude)) deallocate (q_magnitude)
+      if(allocated(mole_fractions)) deallocate (mole_fractions)
 c
 c     deallocation of global arrays from module refer
 c

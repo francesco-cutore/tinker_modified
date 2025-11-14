@@ -20,7 +20,8 @@ c     mass      atomic weight for each atom in the system
 c     name      atom name for each atom in the system
 c     tier      tier name (residue, motif, etc.) for each atom
 c     story     descriptive type for each atom in the system
-c
+c     ntypes    number of unique atom types defined
+c     atom_name array of element symbols for each atom type
 c
       module atomid
       use sizes
@@ -33,5 +34,12 @@ c
       character*3 name(maxatm)
       character*3 tier(maxatm)
       character*24 story(maxatm)
+
+      
+      integer, parameter :: ntypes = 2        
+      character(len=2) :: atom_name(ntypes)
+
+      ! Initialize element symbols
+      data atom_name / 'H ', 'O ' /
       save
       end
