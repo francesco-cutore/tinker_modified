@@ -10,6 +10,8 @@
     
             ! Array to store the denominator <f^2> for each q-vector (j)
             real*8, allocatable, dimension(:) :: pc_favg_sq
+
+            real*8, allocatable :: pc_self_term(:)
         
         contains
         real(8) function atomF(nome,k)
@@ -51,6 +53,41 @@ c            end if
         a_name = atom_name(a)
         atomF_by_index = atomF(a_name, q)
         end function atomF_by_index
+
+!
+!==============================================================
+! NEW FUNCTION: Atom Number to Name Conversion Table
+!==============================================================
+      character*2 function get_name_from_atomic_number(atomic_num)
+          implicit none
+          integer, intent(in) :: atomic_num
+          
+          SELECT CASE (atomic_num)
+              CASE (1)
+                  get_name_from_atomic_number = 'H '
+              CASE (2)
+                  get_name_from_atomic_number = 'He'
+              CASE (3)
+                  get_name_from_atomic_number = 'Li'
+              CASE (4)
+                  get_name_from_atomic_number = 'Be'
+              CASE (5)
+                  get_name_from_atomic_number = 'B '
+              CASE (6)
+                  get_name_from_atomic_number = 'C '
+              CASE (7)
+                  get_name_from_atomic_number = 'N '
+              CASE (8)
+                  get_name_from_atomic_number = 'O '
+              CASE DEFAULT
+                  get_name_from_atomic_number = '??'
+                  print *, 'Error: Unknown atomic number:', atomic_num
+                  stop
+          END SELECT
+          
+      end function get_name_from_atomic_number
+
+
 
         real(8) function q02(nome,k)
             real(8) a1, b1, a2, b2, a3, b3, a4, b4, c, k

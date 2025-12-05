@@ -34,12 +34,6 @@ c
       character*3 name(maxatm)
       character*3 tier(maxatm)
       character*24 story(maxatm)
-
-      
-      integer, parameter :: ntypes = 2        
-      character(len=2) :: atom_name(ntypes)
-
-      ! Initialize element symbols
-      data atom_name / 'H ', 'O ' /
+      character(len=2), allocatable :: atom_name(:)
       save
       end

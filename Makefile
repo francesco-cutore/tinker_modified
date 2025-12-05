@@ -41,7 +41,7 @@
 ##  APBS_LIBDIR     Directory with APBS Libraries
 ##  APBS_LIBS       APBS Libraries needed to build Tinker
 
-TINKERDIR = /home/franc/mystuff/tinker
+TINKERDIR = /home/fra/Desktop/tinker
 TINKER_LIBDIR = $(TINKERDIR)/lib
 BINDIR = $(TINKERDIR)/bin
 LINKDIR = /usr/local/bin
@@ -69,8 +69,8 @@ APBS_LIBS = -lapbsmainroutines -lapbs -lmaloc -lapbsblas
 F77 = gfortran
 ##F77 = scorep gfortran
 F77FLAGS = -c
-##OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
-OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
+OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
+##OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
 ## OPTFLAGS = -Ofast -march=native -fopenmp
 ## OPTFLAGS = -Og -g -fbacktrace -fcheck=bounds -Wunused -Wmaybe-uninitialized
 LIBDIR = -L. -L$(TINKER_LIBDIR)/linux -Wl,--no-as-needed -ldl
@@ -157,7 +157,6 @@ OBJS =	action.o \
 	factors.o \
 	ascii.o \
 	atmlst.o \
-	atom_sort.o \
 	atomid.o \
 	atoms.o \
 	attach.o \
@@ -1119,7 +1118,6 @@ libtinker.a: ${OBJS}
 	factors.o \
 	ascii.o \
 	atmlst.o \
-	atom_sort.o \
 	atomid.o \
 	atoms.o \
 	attach.o \
@@ -1676,7 +1674,6 @@ argue.o:
 rdfparams.o:
 ascii.o:
 atmlst.o:
-atom_sort.o: atoms.o atomid.o
 factors.o:
 atomid.o: sizes.o
 atoms.o: sizes.o
@@ -1887,7 +1884,7 @@ fftpack.o: math.o
 field.o: fields.o inform.o iounit.o keys.o potent.o sizes.o
 fields.o:
 files.o:
-final.o: align.o analyz.o angang.o angbnd.o angtor.o atmlst.o bitor.o bndstr.o cell.o cflux.o charge.o chgpen.o chgtrn.o chunks.o couple.o deriv.o dipole.o disgeo.o domega.o expol.o faces.o factors.o fft.o fields.o fracs.o freeze.o group.o hessn.o hpmf.o ielscf.o improp.o imptor.o inform.o iounit.o kanang.o kangs.o kantor.o katoms.o kbonds.o kcflux.o kchrge.o kcpen.o kctrn.o kdipol.o kdsp.o kexpl.o keys.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolpr.o kpolr.o krepl.o ksolut.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o light.o limits.o merck.o molcul.o moldyn.o mpole.o mrecip.o mutant.o neigh.o nonpol.o omega.o opbend.o opdist.o orbits.o params.o paths.o pbstuf.o pdb.o piorbs.o pistuf.o pitors.o pme.o polar.o polgrp.o polopt.o polpcg.o poltcg.o potfit.o qmstuf.o refer.o repel.o restrn.o rgddyn.o rdfparams.o rigid.o ring.o rotbnd.o shapes.o socket.o solpot.o solute.o stodyn.o strbnd.o strtor.o syntrn.o tarray.o tettor.o tors.o tortor.o tritor.o uprior.o urey.o usage.o vdw.o vibs.o warp.o
+final.o: align.o analyz.o angang.o angbnd.o angtor.o atomid.o atmlst.o bitor.o bndstr.o cell.o cflux.o charge.o chgpen.o chgtrn.o chunks.o couple.o deriv.o dipole.o disgeo.o domega.o expol.o faces.o factors.o fft.o fields.o fracs.o freeze.o group.o hessn.o hpmf.o ielscf.o improp.o imptor.o inform.o iounit.o kanang.o kangs.o kantor.o katoms.o kbonds.o kcflux.o kchrge.o kcpen.o kctrn.o kdipol.o kdsp.o kexpl.o keys.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolpr.o kpolr.o krepl.o ksolut.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o light.o limits.o merck.o molcul.o moldyn.o mpole.o mrecip.o mutant.o neigh.o nonpol.o omega.o opbend.o opdist.o orbits.o params.o paths.o pbstuf.o pdb.o piorbs.o pistuf.o pitors.o pme.o polar.o polgrp.o polopt.o polpcg.o poltcg.o potfit.o qmstuf.o refer.o repel.o restrn.o rgddyn.o rdfparams.o rigid.o ring.o rotbnd.o shapes.o socket.o solpot.o solute.o stodyn.o strbnd.o strtor.o syntrn.o tarray.o tettor.o tors.o tortor.o tritor.o uprior.o urey.o usage.o vdw.o vibs.o warp.o
 findnuc.o: atomid.o atoms.o bitor.o couple.o
 findpro.o: atomid.o atoms.o bitor.o couple.o
 findseq.o: atomid.o atoms.o bitor.o couple.o inform.o iounit.o sequen.o tettor.o tritor.o
@@ -2136,10 +2133,10 @@ qmstuf.o:
 qrsolve.o:
 quatfit.o: align.o
 radial.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o
-structfactor_direct.o: atomid.o atoms.o atom_sort.o rdfparams.o factors.o openmp.o
+structfactor_direct.o: atomid.o atoms.o rdfparams.o factors.o openmp.o
 generate_qshell.o: rdfparams.o
 decimation.o: rdfparams.o
-radialask.o: argue.o atom_sort.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o rdfparams.o factors.o
+radialask.o: argue.o atomid.o atoms.o bound.o boxes.o files.o inform.o iounit.o limits.o math.o molcul.o potent.o rdfparams.o factors.o
 random.o: inform.o iounit.o keys.o math.o
 rattle.o: atomid.o atoms.o freeze.o group.o inform.o iounit.o moldyn.o units.o usage.o virial.o
 readcart.o: output.o

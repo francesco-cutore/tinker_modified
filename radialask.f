@@ -1,5 +1,3 @@
-c
-c
 c     ##############################################################
 c     ##  COPYRIGHT (C) 1995 by Yong Kong and Jay William Ponder  ##
 c     ##                      Modified by FC                      ##
@@ -32,7 +30,6 @@ c
       use potent
       use rdfparams
       use factors
-      use atom_sort
       
       implicit none
       integer slw                                   ! sliding window size
@@ -46,26 +43,43 @@ c
       character*240 string
 
       real*8 q_min
-      real*8, parameter :: q_max = 10.0d0          ! Maximum q value
-      real*8, parameter :: q_spat = 0.1d0             ! Spatial bin size
-      real*8, parameter :: q_aggr = 1.5d0             ! Overgeneration maximum q value
-      real*8, parameter :: force = 1.0d0              ! Force of overgeneration
-      real*8, parameter :: q_threshold = 2.0d0        ! Threshold for decimation
-      real*8, parameter :: decimation_power = 2.0d0   ! Power for decimation
-      logical, parameter :: sort = .false.
+      real*8, parameter :: q_max = 10.0d0             ! Maximum q value
+      real*8, parameter :: q_spat = 0.10               ! Spatial bin size change also q step
+      real*8, parameter :: q_aggr = 1.0d0             ! Overgeneration maximum q value
+      real*8, parameter :: force = 2.0d0              ! Force of overgeneration
+      real*8, parameter :: q_threshold = 10.d0        ! Threshold for decimation
+      real*8, parameter :: decimation_power = 1.5d0   ! Power for decimation 
+
+c     ==================================================================
+c     NORMALIZATION SETTINGS (Matching C++ Code)
+c     1 = Average Atom  (C++ Case 0): Divides by <f>^2. High q > 1.
+c     2 = Faber-Ziman   (C++ Case 1): Divides by <f^2>. High q -> 1.
+c     3 = Manual        (C++ Case 2): Divides by manual_factor.
+c     4 = None          (C++ Case 3): Divides by 1.
+c     ==================================================================
+      integer, parameter :: normalization_mode = 2    
+      real*8, parameter  :: manual_factor = 0.9d0
 
 c     for the counter
-      integer num_unique
-      logical is_new 
-      character :: unique(n)
+      integer :: num_unique
+      logical :: is_new
+      integer :: unique_z(n)
 
-c     global variables
+c     global variables 
 
-      rdf_sort = sort      
+      q_min = 2 * pi / (xbox)
+      q_step = q_min
+      
+      rdf_width = q_spat
+      NN = int(q_max / rdf_width) + 1
 
-      q_step = 0.1d0
-      q_min = 4 * pi / (xbox)
-      NN = int(q_max * (10.0d0 / q_step))
+      print *, '---------------------------------------------'
+      print *, ' RESOLUTION SETUP:'
+      print *, ' q_spat (Bin Width): ', rdf_width
+      print *, ' q_step (Lattice):   ', q_step
+      print *, ' Total Bins (NN):    ', NN
+      print *, '---------------------------------------------'
+
       ctn = 1
       savelock = 0
       rdf_num = 1
@@ -81,34 +95,38 @@ c     global variables
    40    continue
       end if
 
-      print *, 'names' 
-      do i = 1, n
-          print *, trim(name(i))
-      end do
-
-      if (sort) then
-            call prepare_atom_sort() 
-            call apply_sorted_order()
-      endif      
+c      if (sort) then
+c            call prepare_atom_sort() 
+c            call apply_sorted_order()
+c      endif      
 c             
 c     count number of different occurrences of atom names
 c
       num_unique = 0
       do i = 1, n
-      is_new = .true.
-            do j = 1, num_unique
-                  if (trim(name(i)) == trim(unique(j))) then
-                        is_new = .false.
-                        exit
-                  end if
-            end do
-            if (is_new) then
-               num_unique = num_unique + 1
-               unique(num_unique) = trim(name(i))
-            end if
+          is_new = .true.
+          do j = 1, num_unique
+              if (atomic(i) == unique_z(j)) then
+                  is_new = .false.
+                  exit
+              end if
+          end do
+          if (is_new) then
+             num_unique = num_unique + 1
+             unique_z(num_unique) = atomic(i)
+          end if
       end do
       
       n_species = num_unique
+c
+c     Allocate global atom_name array and fill it from atomic numbers
+c
+      allocate(atom_name(n_species))
+      do i = 1, n_species
+          atom_name(i) = get_name_from_atomic_number(unique_z(i))
+c          print *, 'Atom type ', i, ' : ', trim(atom_name(i))
+      end do
+
 c
 c     Map atoms to type index AND count occurrences 
 c
@@ -118,8 +136,10 @@ c
 
       do i = 1, n
           do j = 1, n_species
-              ! If the name from the original list matches a name in our unique key...
-              if (trim(name(i)) == trim(unique(j))) then
+              !
+              ! If the atom's Z-number matches a number in our unique key...
+              !
+              if (atomic(i) == unique_z(j)) then
                   atype(i) = j  ! ...store its type index
                   
                   ! ...and increment the count for that type
@@ -129,9 +149,7 @@ c
               end if
           end do
       end do
-      if (sort) then
-            call apply_original_order()
-      endif
+
 c
 c     Normalize counts to get mole fractions ---
 c
@@ -171,11 +189,13 @@ c
 c     overwrite rdf.txt file
 c
       unit = freeunit ()
-      open(unit,file='st.txt',status='unknown')
+
+      open(unit,file='st.csv',status='unknown')
+
       write(unit, 180) 
-  180 format(/,' Direct Structure Factor - Sliding Window Average',
-     &          /,' q-value (Å⁻¹)    S(q) (sliding avg)',/)
-      close(unit)      
+  180 format('q_value(A^-1);S_q_avg')
+      
+      close(unit)
 
       allocate (S_hist(NN,rdf_mean,rdf_num))
       allocate (q_magnitude(NN))
@@ -184,13 +204,108 @@ c
 
       ! Only compute q_magnitude once, outside this routine if possible
       do i = 1, NN
-            q_magnitude(i) =  (i) * q_step / 10.0d0
+            q_magnitude(i) =  dble(i) * rdf_width
       end do
 
-      call generate_qshell_imp (q_max, q_min, q_step,
-     & q_spat, q_aggr, force)
+c      call generate_qshell_imp (q_max, q_min, q_step,
+c     & q_spat, q_aggr, force)
+      call generate_lattice (q_max, q_min, q_step,
+     & q_spat)
       call decimation (q_threshold, decimation_power,q_max)
 
-      call precompute_form_factors()
+      ! === NEW: Call the experimental loader ===
+      call load_experimental_data()
+      ! =========================================
 
-      end
+      call precompute_form_factors(normalization_mode, 
+     & manual_factor)
+
+      end subroutine radialask
+
+c     ################################################################
+c     ##  Load and Re-bin Experimental Structure Factor             ##
+c     ################################################################
+      subroutine load_experimental_data()
+      use rdfparams
+      use iounit
+      implicit none
+      
+      integer :: i, ios, bin_idx
+      integer :: file_unit, debug_unit
+      integer :: bin_counts(NN)
+      real*8 :: q_val, s_val
+      logical :: file_exists
+
+      ! Check if file exists
+      inquire(file='water_sfac.dat', exist=file_exists)
+      if (.not. file_exists) then
+          write(*,*) 'not found.'
+          return
+      end if
+
+      write(*,*) 'Loading exp_sfac...'
+
+      ! Allocate global array
+      if (allocated(S_exp_binned)) deallocate(S_exp_binned)
+      allocate(S_exp_binned(NN))
+      
+      ! Initialize arrays
+      S_exp_binned = 0.0d0
+      bin_counts = 0
+
+      ! Open file
+      open(newunit=file_unit, file='water_sfac.dat', status='old', 
+     &     action='read')
+
+      ! Read Loop
+      do
+          read(file_unit, *, iostat=ios) q_val, s_val
+          if (ios /= 0) exit 
+
+          ! Use the global rdf_width (which is now == q_spat)
+          bin_idx = nint(q_val / rdf_width)
+
+          if (bin_idx .ge. 1 .and. bin_idx .le. NN) then
+              S_exp_binned(bin_idx) = S_exp_binned(bin_idx) + s_val
+              bin_counts(bin_idx) = bin_counts(bin_idx) + 1
+          end if
+      end do
+
+      close(file_unit)
+
+      ! Average the bins
+      do i = 1, NN
+          if (bin_counts(i) .gt. 0) then
+              S_exp_binned(i) = S_exp_binned(i) / dble(bin_counts(i))
+c              print *, 'Exp data bin ', i, ' q=', i*rdf_width, 
+c     &                ' S_exp=', S_exp_binned(i)
+          else
+              ! If bin is empty, keep it 0.0 or handle as needed
+              S_exp_binned(i) = 0.0d0
+          end if
+      end do
+      ! --- Debug Output: Save to CSV ---
+      write(*,*) 'Writing debug file: debug_experimental_sfac.csv'
+      
+      open(newunit=debug_unit, file='debug_experimental_sfac.csv', 
+     &     status='replace')
+      
+      ! Header: q, S_exp, number_of_points_merged
+      write(debug_unit, '(a)') 'q_value,S_exp_rebinned,count'
+
+      do i = 1, NN
+          ! Only write non-empty bins as requested
+          if (bin_counts(i) .gt. 0) then
+              write(debug_unit, '(f12.6,a,f12.6,a,i8)') 
+     &              q_magnitude(i), ',', 
+     &              S_exp_binned(i), ',', 
+     &              bin_counts(i)
+          end if
+      end do
+
+      close(debug_unit)
+
+      write(*,*) 'Experimental data loaded and re-binned successfully.'
+
+      return
+      end subroutine load_experimental_data

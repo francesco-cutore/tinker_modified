@@ -23,6 +23,7 @@ c
       use angang
       use angbnd
       use angtor
+      use atomid
       use atmlst
       use bitor
       use bndstr
@@ -420,7 +421,8 @@ c
 c     deallocation of global arrays from module factors
 c     
       if (allocated(pc_fa))  deallocate (pc_fa)
-      if (allocated(pc_favg_sq))  deallocate (pc_favg_sq) 
+      if (allocated(pc_favg_sq))  deallocate (pc_favg_sq)
+      if (allocated(pc_self_term))  deallocate (pc_self_term) 
 c
 c     deallocation of global arrays from module fft
 c
