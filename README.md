@@ -32,6 +32,6 @@ The methodology and algorithms were benchmarked and validated against simple flu
 
 ## Author & Acknowledgments
 * **Author:** Francesco Cutore 
-* **Advisors:** Prof. Guido Raos, Dott. Alessandro Mariani [cite: 61, 62]
-* **Institution:** School of Industrial and Information Engineering, Politecnico di Milano [cite: 53]
+* **Advisors:** Prof. Guido Raos, Dott. Alessandro Mariani
+* **Institution:** School of Industrial and Information Engineering, Politecnico di Milano
 * **Academic Year:** 2025-26 
