@@ -1,18 +1,15 @@
 c     ##############################################################
 c     ##  COPYRIGHT (C) 1995 by Yong Kong and Jay William Ponder  ##
-c     ##                      Modified by FC                      ##
+c     ##              Modified by Francesco Cutore                ##
 c     ##                   All Rights Reserved                    ##
 c     ##############################################################
 c
 c     ##############################################################################
 c     ##                                                                          ##
-c     ##  subroutine radial  --  compute radial distribution function on the fly  ##
+c     ##  subroutine radialask - manages on-the-fly structure factor calculation  ##
 c     ##                                                                          ##
 c     ##############################################################################
 c
-c
-c     "radial" finds the radial distribution function for a specified
-c     pair of atom types via analysis of a set of coordinate frames
 c
 c
       subroutine radialask
@@ -32,7 +29,7 @@ c
       use factors
       
       implicit none
-      integer slw                                   ! sliding window size
+      integer slw                                     ! Sliding window size
       integer i, j
       real*8 rmax
       logical exist,query
@@ -46,32 +43,21 @@ c
 
       real*8, parameter :: q_max = 3.0d0              ! Maximum q value
       real*8, parameter :: q_spat = 0.1               ! Spatial bin size change also q step
-c      real*8, parameter :: q_aggr = 1.0d0             ! Overgeneration maximum q value
-c      real*8, parameter :: force = 2.0d0              ! Force of overgeneration
       real*8, parameter :: q_threshold = 10.d0        ! Threshold for decimation
       real*8, parameter :: decimation_power = 2.0d0   ! Power for decimation 
 
-      logical, parameter :: debug_ra = .true.  
-      logical, parameter :: verbose_ra = .true.
+      logical, parameter :: debug_ra = .true.         ! Debug flag writing additional files
+      logical, parameter :: verbose_ra = .true.       ! Verbose flag for printing info to console
 
-c     ==================================================================
-c     NORMALIZATION SETTINGS (Matching C++ Code)
-c     1 = Average Atom  (C++ Case 0): Divides by <f>^2. 
-c     2 = Faber-Ziman   (C++ Case 1): Divides by <f^2>. 
-c     3 = Manual        (C++ Case 2): Divides by manual_factor.
-c     4 = None          (C++ Case 3): Divides by 1.
-c     ==================================================================
-      integer, parameter :: normalization_mode = 1    
-      real*8, parameter  :: manual_factor = 0.9d0
-    ! Subtract 1 from experimental S(q)
+      integer, parameter :: normalization_mode = 1    ! Normalization mode for S(q) calculation refers 
+      real*8, parameter  :: manual_factor = 0.9d0     ! to table on the bottom. 
 
-c     for the counter
       integer :: num_unique
       logical :: is_new
       integer, allocatable :: unique_z(:)
-
-c     global variables 
-
+c
+c     Allocate global variables and set parameters 
+c
       verbose_global = verbose_ra
       debug_global = debug_ra
 
@@ -101,7 +87,7 @@ c     global variables
       read_file = .true.
       query = .true.
 c
-c     get sliding window size from input or user
+c     Get sliding window size from input or user
 c
       call nextarg (string,exist)
       if (exist) then
@@ -120,7 +106,9 @@ c
       end if 
 
       rdf_mean = slw
-      
+c
+c     Get force constant k value from input or user
+c      
       query = .true.
       call nextarg (string,exist)
       if (exist) then
@@ -138,7 +126,7 @@ c
       end if
       rdf_kappa = kappa
 c             
-c     count number of different occurrences of atom names
+c     Count number of different occurrences of atom names
 c
       num_unique = 0
       do i = 1, n
@@ -163,7 +151,6 @@ c
       do i = 1, n_species
           atom_name(i) = get_name_from_atomic_number(unique_z(i))
       end do
-
 c
 c     Map atoms to type index AND count occurrences 
 c
@@ -173,26 +160,19 @@ c
 
       do i = 1, n
           do j = 1, n_species
-              !
-              ! If the atom's Z-number matches a number in our unique key...
-              !
-              if (atomic(i) == unique_z(j)) then
-                  atype(i) = j  ! ...store its type index
-                  
-                  ! ...and increment the count for that type
-                  mole_fractions(j) = mole_fractions(j) + 1.0d0 
-                  
-                  exit ! Move to the next atom (i)
+              if (atomic(i) == unique_z(j)) then                  ! If the atom's Z-number matches a number in the unique list
+                  atype(i) = j                                    ! store its type index
+                  mole_fractions(j) = mole_fractions(j) + 1.0d0   ! and increment the count for that type  
+                  exit 
               end if
           end do
       end do
 c
-c     Normalize counts to get mole fractions ---
+c     Normalize counts to get mole fractions
 c
       mole_fractions = mole_fractions / dble(n)
-
 c
-c     get maximum distance from input or minimum image convention
+c     Get maximum distance from input or minimum image convention
 c
       if (.not. use_bounds) then
          rmax = -1.0d0
@@ -219,9 +199,8 @@ c
      &                         zbox2*beta_sin)
          rmax = 0.95d0 * rmax
       end if
-
 c
-c     Overwrite rdf.csv file
+c     Overwrite output files
 c
       unit = freeunit ()
       open(unit,file='st.csv',status='replace')
@@ -240,16 +219,9 @@ c
       write(unit, '(A)') 'Step,Ebond,Eangle,EUrey-Bradley,'//
      &         'EvdW,Echarge-charge,Ex,Total'
       close(unit)
-
 c
-c     Overwrite scattering_log.csv file
+c     Perform array allocations and initializations
 c
-      unit = freeunit()
-
-      open(unit, file='scattering_log.csv', status='replace')
-      write(unit, '(A)') 'Step,RMS_Force,Scattering_Energy'
-      close(unit)
-
       allocate (S_hist(NN,rdf_mean,rdf_num))
       allocate (q_magnitude(NN))
       
@@ -258,13 +230,11 @@ c
       do i = 1, NN
             q_magnitude(i) =  dble(i) * rdf_width
       end do
-
 c
 c   Generate q-vector lattice
 c
       call generate_lattice (q_max, q_min, q_step,
      & q_spat)
-
 c
 c   Apply decimation to q-vectors
 c
@@ -294,10 +264,11 @@ c     ################################################################
       integer :: bin_counts(NN)
       real*8 :: q_val, s_val
       logical :: file_exists
-      logical, parameter :: expminusone = .true.
+      logical, parameter :: expminusone = .true.            ! Flag to subtract 1 from experimental S(q) values
       exp_present = .true.
-
-      ! Check if file exists
+c
+c   Check if file exists
+c
       inquire(file='water_sfact.dat', exist=file_exists)
       if (.not. file_exists) then
           write(*,*) 'EXPERIMENTAL DATA FILE NOT FOUND.'
@@ -306,20 +277,17 @@ c     ################################################################
           exp_present = .false.
           return
       end if
-
-      ! Allocate global array
+c
+c   Allocate arrays, read data, and bin it according to q values
+c
       if (allocated(S_exp_binned)) deallocate(S_exp_binned)
       allocate(S_exp_binned(NN))
-      
-      ! Initialize arrays
+
       S_exp_binned = 0.0d0
       bin_counts = 0
 
-      ! Open file
       open(newunit=file_unit, file='water_sface.dat', status='old', 
      &     action='read')
-
-      ! Read Loop
       do
           read(file_unit, *, iostat=ios) q_val, s_val
           if (ios /= 0) exit 
@@ -331,21 +299,19 @@ c     ################################################################
               bin_counts(bin_idx) = bin_counts(bin_idx) + 1
           end if
       end do
-
       close(file_unit)
 
-      ! Average the bins
       do i = 1, NN
           if (bin_counts(i) .gt. 0) then
               S_exp_binned(i) = S_exp_binned(i) / dble(bin_counts(i))
           else
-              ! If bin is empty, keep it 0.0 or handle as needed
               S_exp_binned(i) = 0.0d0
               print *, 'Missing experimental S(q) bin ', i
           end if
       end do
-
-      ! If the flag is set, subtract 1 from all S_exp values
+c
+c   If the flag is set, subtract 1 from all S_exp values
+c
       if (expminusone) then
           do i = 1, NN
               S_exp_binned(i) = S_exp_binned(i) - 1.0d0
@@ -383,3 +349,11 @@ c     ################################################################
 
       return
       end subroutine load_experimental_data
+
+c     ==================================================================
+c     NORMALIZATION SETTINGS 
+c     1 = Average Atom  (C++ Case 0): Divides by <f>^2. 
+c     2 = Faber-Ziman   (C++ Case 1): Divides by <f^2>. 
+c     3 = Manual        (C++ Case 2): Divides by manual_factor.
+c     4 = None          (C++ Case 3): Divides by 1.
+c     ==================================================================
