@@ -31,7 +31,7 @@ c     &           - 10.0505 * (k - 1.9) + 1
 c                atomF = v1 * escala + v2 * (1 - escala)
 c                print *, 'atomFelse', atomF
 c            end if
-            return
+        return
         end function atomF
 
         integer function get_pair_index(alpha, beta, n_species)
@@ -79,6 +79,8 @@ c            end if
                   get_name_from_atomic_number = 'N '
               CASE (8)
                   get_name_from_atomic_number = 'O '
+              CASE (18)
+                  get_name_from_atomic_number = 'Ar'
               CASE DEFAULT
                   get_name_from_atomic_number = '??'
                   print *, 'Error: Unknown atomic number:', atomic_num
@@ -92,7 +94,7 @@ c            end if
         real(8) function q02(nome,k)
             real(8) a1, b1, a2, b2, a3, b3, a4, b4, c, k
             real(8) kt
-            character nome*1
+            character nome*2
 
             SELECT CASE (nome)
             CASE ('H')
@@ -397,8 +399,8 @@ c            end if
                 c  = 1.30410
             CASE DEFAULT
                 q02 = 0
-C                print *, 'Error: Element not recognized', 
-C     &            ' in q02 function:', nome
+                print *, 'Error: Element not recognized', 
+     &            ' in q02 function:', nome
                 RETURN
             END SELECT
             !CALCULA O TERMO

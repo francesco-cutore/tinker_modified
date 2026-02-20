@@ -36,6 +36,7 @@ c
       use polar
       use units
       use usage
+      use rdfparams
       implicit none
       integer i,j,k
       integer istep
@@ -52,9 +53,13 @@ c
       real*8, allocatable :: zold(:)
       real*8, allocatable :: derivs(:,:)
 c
+c     track the current MD step for RDF calculations
+c
+      current_md_step = istep
+c
 c
 c     set time values and coefficients for Beeman integration
-c
+ciste
       factor = dble(bmnmix)
       dt_x = dt / factor
       part1 = 0.5d0*factor + 1.0d0
@@ -161,13 +166,13 @@ c
 c     compute statistics and save trajectory for this step
 c
       call mdstat (istep,dt,etot,epot,eksum,temp,pres)
-      if ( .not. arcstop) then
-         call mdsave (istep,dt,etot,epot,eksum)
+      if (mod(current_md_step, 1000) == 0) then
+c         call mdsave (istep,dt,etot,epot,eksum)
       end if
       if (arcstop) then
 c         call radialsub (istep)
 c         call structfactor_direct(istep)
-      call structfactor_direct_spherical(istep)
+c     call structfactor_direct_spherical(istep)
       end if
       call mdrest (istep)
       return

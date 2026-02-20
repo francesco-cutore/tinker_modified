@@ -16,6 +16,13 @@ c
       real*8  q_min_temp, q_step 
       logical rdf_intramol
       logical rdf_read_file, rdf_smooth
+      logical exp_present
+      real*8 rdf_kappa
+
+      logical debug_global
+      logical verbose_global
+
+      integer current_md_step
 
       real*8, allocatable :: S_hist(:,:,:)
       real*8, allocatable :: q_vec(:,:)

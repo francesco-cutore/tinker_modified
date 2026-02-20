@@ -28,10 +28,14 @@ c
       use potent
       use vdwpot
       use virial
+      use rdfparams
       implicit none
       integer i,j
       real*8 energy,cutoff
       real*8 derivs(3,*)
+      integer ::log_unit
+      integer :: freeunit
+      logical :: file_exists
 c
 c
 c     zero out each of the potential energy components
@@ -248,7 +252,11 @@ c
       if (use_solv)  call esolv1
       if (use_metal)  call emetal1
       if (use_geom)  call egeom1
-      if (use_extra)  call extra1
+
+c
+c     call the extra energy and gradient routine
+c     
+      call extra1
 c
 c     sum up to get the total energy and first derivatives
 c
@@ -272,6 +280,31 @@ c
             derivs(j,i) = desum(j,i)
          end do
       end do
+
+      if (mod(current_md_step, 10) == 0) then
+      
+         log_unit = freeunit()
+      
+         inquire(file='energy.csv', exist=file_exists)
+      
+         open(unit=log_unit, file='energy.csv', status='unknown', 
+     &     position='append')
+      
+         if (.not. file_exists) then
+            write(log_unit, '(A)') 'Step,Ebond,Eangle,EUrey-Bradley,'//
+     &         'EvdW,Echarge-charge,Ex,Total'
+         end if
+
+c        Use F16.6 format: 6 values with commas, then the last value
+         write (log_unit, 40)  current_md_step,eb, ea, 
+     &               eub, ev, ec, 
+     &               ex, esum
+40    format (I8,',',ss,6(es0.12,','),es0.12)
+
+            close (log_unit)
+
+      end if
+      
 c
 c     distribute gradient on four-site water extra centers
 c

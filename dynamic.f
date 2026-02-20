@@ -127,7 +127,7 @@ c
       end do
       iwrite = nint(dtsave/dt)
       
-      print *, arcstop
+      print *, 'arcstop = ', arcstop
 c
 c     get choice of statistical ensemble for periodic system
 c

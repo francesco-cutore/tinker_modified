@@ -11,11 +11,6 @@
       logical :: keep_vector
       integer :: file_unit
       
-c      write(*,*) 'Applying q-vector reduction:'
-c      write(*,*) '  Threshold q =', q_threshold
-c      write(*,*) '  Decimation power =', decimation_power
-c      write(*,*) '  Initial vectors:', max_vect
-      
       n_kept = 0
       j = 0
       
@@ -28,7 +23,6 @@ c           Keep all vectors below threshold
 c           Keep all vectors above q_max
             keep_vector = .true.
         else
-c            print * , 'reducing'
 c           Apply tunable decimation      
             q_ratio = q_mag / q_threshold
             decimation_factor = max(1, int(q_ratio**decimation_power))           
@@ -44,11 +38,22 @@ c           Apply tunable decimation
         end if
       end do
       
-      write(*,*) '  Final vectors:', n_kept
-      write(*,*) '  Reduction factor:', real(max_vect)/real(n_kept)
-      
+      if (verbose_global) then
+        print *, '---------------------------------------------'
+        print *, ' DECIMATION SUMMARY '
+        print *, ' Initial number of q-vectors:', max_vect
+        print *, ' q_threshold (A^-1):', q_threshold
+        print *, ' Decimation power:', decimation_power
+        print *, ' Final number of q-vectors:', n_kept
+        print *, ' Decimation factor (approx):', 
+     &    real(max_vect)/real(n_kept)
+        print *, '---------------------------------------------'
+
+      end if
+
       max_vect = n_kept
-      if (savelock .eq. 1000) then
+
+      if (debug_global) then
     
 c       Write to CSV file
         file_unit = 11
@@ -65,8 +70,6 @@ c       Write data
      &          q_vec(i,3), ',', 
      &          int(q_vec(i,4))
         end do
-
-                
         close(file_unit)
       endif
       

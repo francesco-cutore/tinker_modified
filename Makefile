@@ -69,8 +69,8 @@ APBS_LIBS = -lapbsmainroutines -lapbs -lmaloc -lapbsblas
 F77 = gfortran
 ##F77 = scorep gfortran
 F77FLAGS = -c
-OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
-##OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
+##OPTFLAGS =  -march=native -fopenmp -Og -g -fbacktrace -fcheck=bounds
+OPTFLAGS = -O3 -march=native -fopenmp -ffast-math
 ## OPTFLAGS = -Ofast -march=native -fopenmp
 ## OPTFLAGS = -Og -g -fbacktrace -fcheck=bounds -Wunused -Wmaybe-uninitialized
 LIBDIR = -L. -L$(TINKER_LIBDIR)/linux -Wl,--no-as-needed -ldl
@@ -1682,7 +1682,7 @@ baoab.o: atomid.o atoms.o bath.o freeze.o limits.o mdstuf.o moldyn.o potent.o st
 bar.o: boxes.o files.o inform.o iounit.o keys.o output.o titles.o units.o
 basefile.o: ascii.o files.o
 bath.o:
-beeman.o: atomid.o atoms.o freeze.o ielscf.o mdstuf.o moldyn.o polar.o units.o usage.o
+beeman.o: atomid.o atoms.o freeze.o ielscf.o mdstuf.o moldyn.o polar.o units.o usage.o rdfparams.o
 bicubic.o:
 bitor.o:
 bitors.o: angbnd.o atoms.o bitor.o couple.o
@@ -1873,7 +1873,7 @@ exfield.o: action.o analyz.o atoms.o charge.o chgpot.o deriv.o energi.o extfld.o
 expol.o:
 extfld.o:
 extra.o: energi.o
-extra1.o: atoms.o deriv.o energi.o
+extra1.o: atoms.o deriv.o energi.o rdfparams.o
 extra2.o: atoms.o hessn.o
 extra3.o: action.o analyz.o atoms.o energi.o
 faces.o:

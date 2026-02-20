@@ -133,6 +133,7 @@ c
      &          + ec + ecd + ed + em + ep + ect + erxf + es + elf
      &          + eg + ex
       energy = esum
+      
 c
 c     check for an illegal value for the total energy
 c
