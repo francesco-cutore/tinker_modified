@@ -253,10 +253,7 @@ c
       if (use_metal)  call emetal1
       if (use_geom)  call egeom1
 
-c
-c     call the extra energy and gradient routine
-c     
-      call extra1
+      if (use_extra)  call extra1
 c
 c     sum up to get the total energy and first derivatives
 c
@@ -281,25 +278,35 @@ c
          end do
       end do
 
-      if (mod(current_md_step, 10) == 0) then
-      
+      if (use_scatter .and. mod(current_md_step, 10) == 0) then
+
          log_unit = freeunit()
-      
-         inquire(file='energy.csv', exist=file_exists)
-      
-         open(unit=log_unit, file='energy.csv', status='unknown', 
-     &     position='append')
+
+         inquire(file=trim(scatter_tag)//'_energy.csv',
+     &           exist=file_exists)
+
+         open(unit=log_unit, file=trim(scatter_tag)//'_energy.csv',
+     &     status='unknown', position='append')
       
          if (.not. file_exists) then
-            write(log_unit, '(A)') 'Step,Ebond,Eangle,EUrey-Bradley,'//
-     &         'EvdW,Echarge-charge,Ex,Total'
+c           full-decomposition header, temporarily reduced to vdW +
+c           restraint RMS(dS) only (restore together with the write and
+c           format 40 below to bring the other terms back):
+c           write(log_unit, '(A)') 'Step,Ebond,Eangle,EUrey-Bradley,'//
+c    &         'EvdW,Echarge-charge,Ex,Total'
+            write(log_unit, '(A)') 'Step,EvdW,RMS_dS'
          end if
 
-c        Use F16.6 format: 6 values with commas, then the last value
-         write (log_unit, 40)  current_md_step,eb, ea, 
-     &               eub, ev, ec, 
-     &               ex, esum
-40    format (I8,',',ss,6(es0.12,','),es0.12)
+c        Temporarily logging only the vdW energy and the restraint's
+c        weighted RMS deviation. To restore the full energy decomposition,
+c        uncomment the block below (write + format 40) and the header
+c        above, and comment out the vdW+RMS write.
+c        write (log_unit, 40)  current_md_step,eb, ea,
+c    &               eub, ev, ec,
+c    &               ex, esum
+c40    format (I8,',',ss,6(es0.12,','),es0.12)
+         write (log_unit, 41)  current_md_step, ev, scatter_rms
+41    format (I8,',',ss,es0.12,',',es0.12)
 
             close (log_unit)
 

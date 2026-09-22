@@ -27,6 +27,7 @@ c
       use keys
       use mdstuf
       use potent
+      use rdfparams
       use stodyn
       use usage
       implicit none
@@ -37,7 +38,6 @@ c
       character*20 keyword
       character*240 record
       character*240 string
-      logical arcstop
 c
 c
 c     set up the structure and molecular mechanics calculation
@@ -65,6 +65,8 @@ c
          if (keyword(1:11) .eq. 'INTEGRATOR ') then
             call getword (record,integrate,next)
             call upcase (integrate)
+         else if (keyword(1:17) .eq. 'SCATTER-RESTRAIN ') then
+            use_scatter = .true.
          end if
       end do
 c
@@ -109,10 +111,8 @@ c
 c     set the time between trajectory snapshot coordinate saves
 c
       dtsave = -1.0d0
-      arcstop = .false.
       call nextarg (string,exist)
-      if (exist)  read (string,*,err=90,end=90)  dtsave
-      if (dtsave .le. 0.01d0) arcstop = .true.  
+      if (exist)  read (string,*,err=90,end=90)  dtsave 
    90 continue
       do while (dtsave .lt. 0.0d0)
          write (iout,100)
@@ -122,12 +122,9 @@ c
   110    format (f20.0)
          if (dtsave .le. 0.0d0)  dtsave = 0.1d0
   120    continue
-         if (dtsave .le. 0.01d0) arcstop = .true.  
-         continue   
       end do
       iwrite = nint(dtsave/dt)
       
-      print *, 'arcstop = ', arcstop
 c
 c     get choice of statistical ensemble for periodic system
 c
@@ -230,12 +227,10 @@ c
          end if
       end if
 c
-c     call radialask to set parameters for radialsub
+c     call radialask to set parameters for radialsub, but only if
+c     the SCATTER-RESTRAIN keyword requested the scattering restraint
 c
-      if (arcstop) then
-         call radialask
-      end if   
-
+      if (use_scatter)  call radialask
 c
 c     perform the setup functions needed to run dynamics
 c
@@ -289,10 +284,11 @@ c
 c     integrate equations of motion to take a time step
 c
       do istep = 1, nstep
+         current_md_step = istep
          if (integrate .eq. 'VERLET') then
             call verlet (istep,dt)
          else if (integrate .eq. 'BEEMAN') then
-            call beeman (istep,dt,arcstop)
+            call beeman (istep,dt)
          else if (integrate .eq. 'BAOAB') then
             call baoab (istep,dt)
          else if (integrate .eq. 'BUSSI') then
@@ -308,7 +304,7 @@ c
          else if (integrate .eq. 'RESPA') then
             call respa (istep,dt)
          else
-            call beeman (istep,dt,arcstop)
+            call beeman (istep,dt)
          end if
       end do
 c

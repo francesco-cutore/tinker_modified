@@ -1,7 +1,7 @@
       subroutine generate_lattice(q_max, q_mi, dq, q_spat)
 
       use rdfparams
-      implicit none 
+      implicit none
 
 c     Input parameters
       real*8, intent(in) :: q_mi      ! Min q magnitude
@@ -11,9 +11,7 @@ c     Input parameters
 
 c     Local variables
       real*8 :: qx, qy, qz, q_mag
-      real*8, allocatable :: bin_edges(:)
       integer :: bin_idx
-      integer :: n_sbins
       integer :: n_vectors                ! Total count for allocation
       integer :: idx_vec                  ! Index for filling
       integer :: nx, ny, nz, n_limit
@@ -21,21 +19,17 @@ c     Local variables
 
 c     File handling
       integer :: file_unit
-      
+
 c     Initialize
       n_vectors = 0                       ! Counter for number of q-vectors
 
 c     Calculate limits for integer loops
       n_limit = int(q_max / dq) + 1
 
-c     Setup Binning
-      n_sbins = int((q_max - q_mi) / q_spat) + 1
-      sfac_nbins = n_sbins - 1
-      allocate(bin_edges(n_sbins))
-
-      do i = 1, n_sbins
-        bin_edges(i) = q_mi + real(i-1) * q_spat
-      end do 
+c     Number of bins matches the bin_idx clamp used below (absolute,
+c     from zero -- consistent with q_magnitude(i) = i*rdf_width in
+c     radialask.f), not offset by q_mi
+      sfac_nbins = int(q_max / q_spat) + 1
 
 c     Start Pass 1:
 c     Count number of q-vectors in the shell
@@ -117,7 +111,9 @@ c     Store the q-vectors and their bin numbers
       if (debug_global) then   
 
         file_unit = 10
-        open(unit=file_unit, file='qmatrix_imp.csv', status='replace')
+        open(unit=file_unit,
+     &        file=trim(scatter_basetag)//'_qmatrix_imp.csv',
+     &        status='replace')
         write(file_unit, '(a)') 'x,y,z,bin_number'
         do i = 1, n_vectors
             write(file_unit, '(f12.6,a,f12.6,a,f12.6,a,i8)') 
@@ -130,7 +126,5 @@ c     Store the q-vectors and their bin numbers
         
       endif
 
-      deallocate(bin_edges)    
-      
       return
       end subroutine generate_lattice

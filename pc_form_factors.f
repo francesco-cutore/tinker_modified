@@ -20,8 +20,14 @@ c
         real*8 :: qx, qy, qz, qmg, fa
         real*8 :: sum_xf, sum_xf2
         
-        ! Allocate global arrays
-        
+        ! Allocate global arrays (guard against re-allocation --
+        ! this routine may be called more than once per run, e.g.
+        ! by SCATTER-AUTOTUNE trying multiple normalization modes)
+
+        if (allocated(pc_fa)) deallocate(pc_fa)
+        if (allocated(pc_favg_sq)) deallocate(pc_favg_sq)
+        if (allocated(pc_self_term)) deallocate(pc_self_term)
+
         allocate(pc_fa(max_vect, n_species))
         allocate(pc_favg_sq(max_vect))
         allocate(pc_self_term(max_vect))

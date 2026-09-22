@@ -3,7 +3,7 @@
       implicit none
       real*8, intent(in) :: q_threshold
       real*8, intent(in) :: decimation_power
-      real*8, intent(inout) :: q_max
+      real*8, intent(in) :: q_max
       
       integer :: i, j, n_kept
       real*8 :: q_mag, q_ratio
@@ -57,7 +57,9 @@ c           Apply tunable decimation
     
 c       Write to CSV file
         file_unit = 11
-        open(unit=file_unit, file='qmatrix_red.csv', status='replace')
+        open(unit=file_unit,
+     &        file=trim(scatter_basetag)//'_qmatrix_red.csv',
+     &        status='replace')
                   
 c       Write header
         write(file_unit, '(a)') 'x,y,z,bin_number'

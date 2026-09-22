@@ -1,9 +1,3 @@
-c     ##############################################################################
-c     ##                                                                          ##
-c     ##  Optimized & Corrected structfactor_forces Routine                       ##
-c     ##                                                                          ##
-c     ##############################################################################
-
       subroutine structfactor_forces(istep, fx_s, fy_s, fz_s,
      &   total_energy)
          use atomid
@@ -18,34 +12,36 @@ c     ##########################################################################
          real*8, intent(inout) :: total_energy
 
          ! Local variables
-         integer :: i, j, f, a, bin_idx
+         integer :: i, j, a, bin_idx
          integer :: freeunit, unit
          real*8 :: qx, qy, qz, q_dot_r
-         
+
          ! Arrays for Two-Pass Algorithm
          real*8, allocatable :: saved_Eq(:), saved_Gq(:)
          real*8, dimension(NN) :: S_bin_avg, S_diff
          integer, dimension(NN) :: bin_counts
          real*8, dimension(n_species) :: C_species, S_species
-         
+
          ! Scalar temps
-         real*8 :: cos_sum_w, sin_sum_w, S_raw, S_normalized 
+         real*8 :: cos_sum_w, sin_sum_w, S_raw, S_normalized
          real*8 :: S_exp, prefactor, term_energy
          real*8 :: cos_i, sin_i, f_R_i
          real*8 :: dE_dri_x, dE_dri_y, dE_dri_z
          real*8 :: dG_dri_x, dG_dri_y, dG_dri_z
          real*8 :: dS_dri_x, dS_dri_y, dS_dri_z
-         
+         real*8 :: deriv_weight
+
+         ! Weighted-restraint normalization (see SCATTER-NORMALIZE)
+         real*8 :: Wnorm, esum, norm_denom
+         integer :: n_act
+
          ! Parameters
          real*8 :: k_force
          integer, parameter :: savecycles = 100
-         
+
          ! Output History Array
          real*8, dimension(NN) :: S_q_mean_out
 
-         if (ctn > rdf_mean) ctn = 1
-         f = 1
-         
          ! Force Constant
          k_force = rdf_kappa
 
@@ -130,39 +126,114 @@ c     ##########################################################################
          
 
          ! ---------------------------------------------------------
-         ! PASS 2: Average Bins and Compute Deviations
+         ! PASS 2: Normalize This Step's Instantaneous S(q) per Bin,
+         ! then Update the Exponentially-Decaying Running Average the
+         ! Restraint Actually Acts On
          ! ---------------------------------------------------------
-         S_diff = 0.0d0
+c
+c     Rather than a plain rectangular (box-car) moving average -- which
+c     has a small force discontinuity every time the oldest sample
+c     falls out of a fixed-width window -- the restraint uses an
+c     exponential moving average (EWMA): a memory function that decays
+c     smoothly and indefinitely into the past instead of cutting off
+c     sharply at a window edge (Torda, Scheek & van Gunsteren, 1989
+c     -style time-averaged restraint, here generalized from distance
+c     restraints to S(q)):
+c
+c         <S>(t) = alpha*S_inst(t) + (1-alpha)*<S>(t-1)
+c
+c     with alpha = scatter_alpha derived from the requested window
+c     size in radialask.f. There is no <S>(t-1) on the very first
+c     restrained step, so <S> is seeded directly from S_inst there
+c     (equivalent to using alpha=1 for that one step only).
+c
+c     Differentiating the recursion with respect to the CURRENT
+c     positions: <S>(t-1) was computed at an earlier step from
+c     positions that no longer depend on r_i(t), so only the S_inst(t)
+c     term survives the chain rule, each with weight "deriv_weight"
+c     below (alpha normally, or 1 on the seeding step):
+c
+c         d<S>(t)/dr_i(t) = deriv_weight * dS_inst(t)/dr_i(t)
+c
          do i = 1, NN
              if (bin_counts(i) > 0) then
-                 ! Normalize sum to get Average S for this bin
                  S_bin_avg(i) = S_bin_avg(i) / dble(bin_counts(i))
-                 if (exp_present) then 
-                 ! Calculate Difference (Average - Experiment)
+             endif
+         end do
+
+         if (.not. ewma_initialized) then
+            S_bin_ewma = S_bin_avg
+            deriv_weight = 1.0d0
+            ewma_initialized = .true.
+         else
+            S_bin_ewma = scatter_alpha * S_bin_avg
+     &                   + (1.0d0 - scatter_alpha) * S_bin_ewma
+            deriv_weight = scatter_alpha
+         end if
+
+         ! ---------------------------------------------------------
+         ! Compute Deviations of the Running Average from Experiment
+         ! ---------------------------------------------------------
+         S_diff = 0.0d0
+         esum = 0.0d0
+         Wnorm = 0.0d0
+         n_act = 0
+         do i = 1, NN
+             if (bin_counts(i) > 0) then
+                 if (exp_present) then
+                 ! Calculate Difference (Running Average - Experiment)
                  S_exp = S_exp_binned(i)
                  if (S_exp .ne. 0.0d0) then
-                     S_diff(i) = S_bin_avg(i) - S_exp 
-                     
-                     ! Calculate Energy (V = 0.5 * k * Diff^2)
-                     term_energy = 0.5d0 * k_force * (S_diff(i)**2)
-                     total_energy = total_energy + term_energy
+                     S_diff(i) = S_bin_ewma(i) - S_exp
+
+                     ! Accumulate the weighted sum of squares and the
+                     ! weight total W = sum(w_i) over contributing bins.
+                     ! n_act counts them (= W when all weights are 1).
+                     esum = esum + S_exp_weight(i)*(S_diff(i)**2)
+                     Wnorm = Wnorm + S_exp_weight(i)
+                     n_act = n_act + 1
                  end if
                  end if
              endif
          end do
 
-      
-        
-         ! Store in History
-         do i = 1, NN
-             S_hist(i, ctn, f) = S_bin_avg(i)
-         end do
+         ! Restraint normalization: with SCATTER-NORMALIZE on, divide by
+         ! W = sum(w_i) so k is a penalty per unit mean-square deviation,
+         ! independent of the number of bins / q-range / weighting. Off
+         ! by default (norm_denom = 1) -> exact original 0.5*k*sum(...).
+         if (scatter_normalize) then
+             norm_denom = Wnorm
+             if (norm_denom .le. 0.0d0) norm_denom = 1.0d0
+         else
+             norm_denom = 1.0d0
+         end if
 
-      if (exp_present) then 
+         ! Energy V = 0.5 * (k / W) * sum_i w_i * (S_diff_i)^2
+         total_energy = 0.5d0 * (k_force / norm_denom) * esum
+
+         ! Weighted RMS deviation from experiment (independent of k and of
+         ! the normalization switch) -- the restraint convergence metric
+         ! gradient.f logs to *_energy.csv.
+         if (Wnorm .gt. 0.0d0) then
+            scatter_rms = sqrt(esum / Wnorm)
+         else
+            scatter_rms = 0.0d0
+         end if
+
+         if (verbose_global .and. istep == 1) then
+            print *, ' SCATTER restraint normalization:'
+            print *, '   SCATTER-NORMALIZE : ', scatter_normalize
+            print *, '   active bins N_act : ', n_act
+            print *, '   weight sum W      : ', Wnorm
+            print *, '   effective k (k/W) : ', k_force / norm_denom
+         end if
+
+      if (exp_present) then
 !$OMP PARALLEL DO DEFAULT(NONE) NUM_THREADS(16)
 !$OMP& SHARED(max_vect, q_vec, n, x, y, z, atype, NN)
-!$OMP& SHARED(pc_fa, pc_favg_sq, k_force)
+!$OMP& SHARED(pc_fa, pc_favg_sq, k_force, deriv_weight)
 !$OMP& SHARED(saved_Eq, saved_Gq, S_diff, bin_counts)
+!$OMP& SHARED(S_exp_weight, norm_denom)
 !$OMP& PRIVATE(j, qx, qy, qz, bin_idx, i, a, q_dot_r)
 !$OMP& PRIVATE(cos_sum_w, sin_sum_w, prefactor)
 !$OMP& PRIVATE(cos_i, sin_i, f_R_i)
@@ -190,13 +261,25 @@ c     ##########################################################################
             cos_sum_w = saved_Eq(j)
             sin_sum_w = saved_Gq(j)
 
-            ! Force F = -k * (S_avg - S_exp) * (1/N_count) * dS_vector/dr
-            prefactor = -k_force * S_diff(bin_idx)
-            
+            ! dE/dr = k * (<S> - S_exp) * (1/N_count)
+            !         * deriv_weight * dS_vector/dr
+            ! (Tinker convention: dex holds dE/dr, not the force -dE/dr;
+            ! the sign flip to get the force is applied later by the
+            ! integrator, e.g. beeman.f's a = -ekcal*derivs/mass)
+            !
+            ! The deriv_weight factor comes from the chain rule through
+            ! the exponential running average -- see the comment above
+            ! Pass 2's EWMA update for the derivation.
+            prefactor = k_force * S_diff(bin_idx) * deriv_weight
+
+            ! Same per-bin weight and 1/W normalization applied to the
+            ! energy above -- keeps the force an exact gradient of E.
+            prefactor = prefactor*S_exp_weight(bin_idx) / norm_denom
+
             if (bin_counts(bin_idx) > 0) then
                prefactor = prefactor / dble(bin_counts(bin_idx))
             endif
-            
+
             ! Normalization from S definition
             if (pc_favg_sq(j) /= 0.0d0) then
                  prefactor = prefactor / (dble(n) * pc_favg_sq(j))
@@ -227,10 +310,10 @@ c     ##########################################################################
                dS_dri_z = 2.0d0*(cos_sum_w * dE_dri_z + 
      &                           sin_sum_w * dG_dri_z)
 
-               ! Accumulate Force
-               fx_s(i) = -fx_s(i) + prefactor * dS_dri_x
-               fy_s(i) = -fy_s(i) + prefactor * dS_dri_y
-               fz_s(i) = -fz_s(i) + prefactor * dS_dri_z
+               ! Accumulate derivative contribution from this q-vector
+               fx_s(i) = fx_s(i) + prefactor * dS_dri_x
+               fy_s(i) = fy_s(i) + prefactor * dS_dri_y
+               fz_s(i) = fz_s(i) + prefactor * dS_dri_z
             end do
          end do
 !$OMP END PARALLEL DO
@@ -239,66 +322,46 @@ c     ##########################################################################
 
          ! Cleanup Temps
          deallocate(saved_Eq, saved_Gq)
-         if (debug_global) then     
-         if (ctn == rdf_mean) savelock = 1
+         if (debug_global) then
 
-         if (savelock == 1 .and. istep == 1) then
+         if (istep == 1) then
             print *, 'Writing initial S(q)'
-            
-            ! 1. Initialize
-            S_q_mean_out = 0.0d0
 
-            ! 2. Compute Average 
-            do j = 1, rdf_mean
-               do i = 1, NN
-                  S_q_mean_out(i) = S_q_mean_out(i) + S_hist(i, j, f)
-               end do
-            end do
-            
-            ! Normalize
-            if (rdf_mean .gt. 0) then
-               S_q_mean_out = S_q_mean_out / dble(rdf_mean)
-            endif
+            ! The EWMA is seeded directly from the instantaneous S(q)
+            ! on step 1 (see the Pass 2 comment above), so this is
+            ! exactly the starting configuration's S(q)
+            S_q_mean_out = S_bin_ewma
 
             ! 3. Write
             unit = freeunit()
-            open(unit, file='st_init.csv', status='unknown', 
+            open(unit, file=trim(scatter_basetag)//'_st_init.csv',
+     &           status='unknown',
      &           position='append', action='write')
-            
+
             do i = 1, NN
                if (S_q_mean_out(i) .ne. 0.0d0) then
                   write(unit, 310) q_magnitude(i), S_q_mean_out(i)
                end if
             end do
-            
- 310        format(f10.4, ';', f10.4) 
+
+ 310        format(f10.4, ';', f10.4)
             flush(unit)
             close(unit)
          end if
 
-          if (savelock == 1 .and. mod(istep, savecycles) == 0) then
+          if (mod(istep, savecycles) == 0) then
             print *, 'Writing S(q) at step', istep
-            
-            ! 1. Initialize
-            S_q_mean_out = 0.0d0
 
-            ! 2. Compute Average 
-            do j = 1, rdf_mean
-               do i = 1, NN
-                  S_q_mean_out(i) = S_q_mean_out(i) + S_hist(i, j, f)
-               end do
-            end do
-            
-            ! Normalize
-            if (rdf_mean .gt. 0) then
-               S_q_mean_out = S_q_mean_out / dble(rdf_mean)
-            endif
+            ! Reuse the running average already computed above
+            S_q_mean_out = S_bin_ewma
 
             ! 3. Write
             unit = freeunit()
-c            open(unit, file='st.csv', status='unknown', 
+c            open(unit, file=trim(scatter_tag)//'_st.csv',
+c     &           status='unknown',
 c     &           position='append', action='write')
-            open(unit, file='st.csv', status='unknown', 
+            open(unit, file=trim(scatter_tag)//'_st.csv',
+     &           status='unknown',
      &           position='asis', action='write')
              write(unit, 181) 
 181          format('q_value(A^-1);S_q_avg')
@@ -308,13 +371,33 @@ c     &           position='append', action='write')
                   write(unit, 320) q_magnitude(i), S_q_mean_out(i)
                end if
             end do
-            
- 320        format(f10.4, ';', f10.4) 
+
+ 320        format(f10.4, ';', f10.4)
+            flush(unit)
+            close(unit)
+
+            ! S(q,t) time series (item 27): the _st.csv write above is a
+            ! rewrite-in-place, so it only ever preserves the LAST dump.
+            ! Append the same snapshot here instead, tagged with the step,
+            ! keeping both the instantaneous S(q) (S_bin_avg, this step's
+            ! value) and the EWMA (S_bin_ewma, what the restraint biases).
+            unit = freeunit()
+            open(unit, file=trim(scatter_tag)//'_st_traj.csv',
+     &           status='unknown',
+     &           position='append', action='write')
+
+            do i = 1, NN
+               if (S_bin_ewma(i) .ne. 0.0d0) then
+                  write(unit, 330) istep, q_magnitude(i),
+     &                             S_bin_avg(i), S_bin_ewma(i)
+               end if
+            end do
+
+ 330        format(i10, ';', f10.4, ';', f12.4, ';', f12.4)
             flush(unit)
             close(unit)
          end if
       end if
-         ctn = ctn + 1
-          
-         return      
+
+         return
       end subroutine structfactor_forces

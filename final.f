@@ -1048,11 +1048,12 @@ c
 c     deallocation of global arrays from module rdfparams
 c      
       if (allocated(q_magnitude)) deallocate (q_magnitude)
-      if (allocated(S_hist)) deallocate (S_hist)
+      if (allocated(S_bin_ewma)) deallocate (S_bin_ewma)
       if(allocated(atype)) deallocate (atype)
       if( allocated(q_vec)) deallocate (q_vec)
-      if(allocated(q_magnitude)) deallocate (q_magnitude)
       if(allocated(mole_fractions)) deallocate (mole_fractions)
+      if(allocated(S_exp_binned)) deallocate (S_exp_binned)
+      if(allocated(S_exp_weight)) deallocate (S_exp_weight)
 c
 c     deallocation of global arrays from module refer
 c

@@ -26,7 +26,7 @@ c     B. R. Brooks, "Algorithms for Molecular Dynamics at Constant
 c     Temperature and Pressure", DCRT Report, NIH, April 1988
 c
 c
-      subroutine beeman (istep,dt,arcstop)
+      subroutine beeman (istep,dt)
       use atomid
       use atoms
       use freeze
@@ -36,11 +36,9 @@ c
       use polar
       use units
       use usage
-      use rdfparams
       implicit none
       integer i,j,k
       integer istep
-      logical arcstop
       real*8 dt,dt_x,factor
       real*8 etot,eksum,epot
       real*8 temp,pres
@@ -53,13 +51,8 @@ c
       real*8, allocatable :: zold(:)
       real*8, allocatable :: derivs(:,:)
 c
-c     track the current MD step for RDF calculations
-c
-      current_md_step = istep
-c
-c
 c     set time values and coefficients for Beeman integration
-ciste
+c
       factor = dble(bmnmix)
       dt_x = dt / factor
       part1 = 0.5d0*factor + 1.0d0
@@ -166,14 +159,7 @@ c
 c     compute statistics and save trajectory for this step
 c
       call mdstat (istep,dt,etot,epot,eksum,temp,pres)
-      if (mod(current_md_step, 1000) == 0) then
-c         call mdsave (istep,dt,etot,epot,eksum)
-      end if
-      if (arcstop) then
-c         call radialsub (istep)
-c         call structfactor_direct(istep)
-c     call structfactor_direct_spherical(istep)
-      end if
+      call mdsave (istep,dt,etot,epot,eksum)
       call mdrest (istep)
       return
       end
